@@ -1,4 +1,4 @@
 group 1? #name tbd
-harsh rathi 
+Harsh Rathi 
 Mason Mitchell
 Charlie Bupp
