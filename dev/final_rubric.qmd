@@ -1,0 +1,87 @@
+---
+title: "Final Report Rubric — STAT 184 Summer 2026"
+format: html
+---
+
+## Submission
+
+- One PDF per team to Canvas, rendered from a Quarto document in the team's GitHub repo
+- A URL to the 5–7 minute team video presentation
+- Final commit pushed to GitHub repo by the deadline
+
+**Due: Friday, June 26, 11:59 p.m.**
+
+## Hard Requirements
+
+Your report must meet **all** of these. Missing any one costs the associated rubric points.
+
+- **Structure**: all sections in the required report structure, in order
+- **Length**: ≥ 10 pages of body (narrative + figures + tables). Title page, references, and Code Appendix do not count
+- **Figures**: ≥ 3, each with a caption, numbered cross-reference, and discussion in text
+- **Table**: ≥ 1 non-trivial (summary/aggregated) table, captioned and cross-referenced
+- **Multivariate figure**: ≥ 1 figure showing 3+ variables
+- **Code**: in the Code Appendix only
+
+## Rubric (100 points)
+
+### Report Content (56)
+
+| Component | Points | Done? |
+|-----------|--------|-------|
+| Introduction & Motivation — clear and engaging | 4 | [ ] |
+| Research question(s) explicitly stated | 4 | [ ] |
+| Data Provenance documented (source, collector, purpose, cases) | 5 | [ ] |
+| Variables described and justified | 4 | [ ] |
+| Data Wrangling & Cleaning explained in narrative (not just code) | 5 | [ ] |
+| Non-trivial summary table (caption + cross-reference + discussion) | 5 | [ ] |
+| Figure 1 (caption + cross-reference + discussion) | 4 | [ ] |
+| Figure 2 (caption + cross-reference + discussion) | 4 | [ ] |
+| Figure 3 (caption + cross-reference + discussion) | 4 | [ ] |
+| At least one figure displays 3+ variables effectively | 4 | [ ] |
+| Findings / Conclusions clearly stated and tied to question(s) | 6 | [ ] |
+| Limitations & Future Work discussion | 4 | [ ] |
+| Body meets 10-page minimum (narrative only; appendix/refs excluded) | 3 | [ ] |
+| References / citations of data and sources | 4 | [ ] |
+
+### Code Quality (15)
+
+| Component | Points | Done? |
+|-----------|--------|-------|
+| Code runs cleanly (renders from scratch) | 5 | [ ] |
+| Meaningfully commented | 4 | [ ] |
+| Code in appendix, not body | 3 | [ ] |
+| Reproducible from GitHub repo | 3 | [ ] |
+
+### Reproducibility (10)
+
+| Component | Points | Done? |
+|-----------|--------|-------|
+| GitHub repo well-organized with README | 4 | [ ] |
+| All team members have commits | 3 | [ ] |
+| Data accessible (in repo or via working URL) | 3 | [ ] |
+
+### Video Presentation (10)
+
+| Component | Points | Done? |
+|-----------|--------|-------|
+| Within time limit (5–7 min) | 2 | [ ] |
+| Each team member speaks | 3 | [ ] |
+| Covers question, data, key findings | 3 | [ ] |
+| Coherent, well-paced, audible | 2 | [ ] |
+
+### AI Use & Integrity (5)
+
+| Component | Points | Done? |
+|-----------|--------|-------|
+| AI use note included in report | 2 | [ ] |
+| Honest attribution of external sources | 3 | [ ] |
+
+**Total: 100**
+
+## Individual Adjustments
+
+Project grades may be adjusted up or down by up to 10 points per individual based on oral checkpoints and observable team contribution. A student who cannot engage with the project at oral checkpoints will receive a lower individual grade than the team's collective work would suggest.
+
+## Late Policy
+
+Late work for the final project requires a request to the instructor at least 24 hours before the deadline, with evidence of progress and a proposed new deadline. Without prior arrangement, late final reports lose 10 points per 24 hours.

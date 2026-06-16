@@ -1,0 +1,75 @@
+---
+title: "Project Guidelines & Checklist"
+format: html
+---
+
+## Topic and Questions
+
+- [ ] Pick a topic the team is genuinely interested in
+- [ ] Come up with 1–3 clear, answerable research questions
+
+Our topic: **Video game film adaptations**
+
+1. Do critics and audiences agree on video game movies, and has that gap changed over time?
+2. Does publisher franchise power predict box office success?
+3. Does franchise fatigue exist in video game movies?
+
+---
+
+## Data
+
+- [x] Primary source: TidyTuesday CSV (not the R package) — [game_films.csv](https://raw.githubusercontent.com/rfordatascience/tidytuesday/main/data/2026/2026-06-09/game_films.csv)
+- [ ] Supplementary sources (CPI table, FX rates, publisher revenue) — note provenance
+- [ ] Read in, tidy, wrangle, clean
+- [ ] Describe data provenance: where, who, why, what are the cases (one row = one film)
+
+---
+
+## Report Requirements
+
+### Format
+- [ ] Quarto, output as **PDF**
+- [ ] Code in **Code Appendix** at the end (use `ref.label` snippet)
+- [ ] Body = narrative + figures + tables (no raw code)
+
+### Length
+- [ ] Body ≥ 10 pages (title page, references, appendix don't count)
+
+### Figures & Tables
+- [ ] ≥ 3 figures (plots)
+- [ ] ≥ 1 non-trivial table (summary/aggregation, not raw data dump)
+- [ ] ≥ 1 figure with 3+ variables (color, facets, size, shape)
+- [ ] Every figure/table: caption + cross-reference by number from narrative
+- [ ] Each figure/table: a few sentences of discussion
+
+### Required Sections (in order)
+- [ ] **Title block**: report title, all team members, date
+- [ ] **Introduction & Motivation**: what and why
+- [ ] **Research Question(s)**: 1–3 questions, numbered/labeled
+- [ ] **Data Provenance**: source, collector, cases, key variables (with units)
+- [ ] **Data Wrangling & Cleaning**: narrative of import/tidy/join/clean decisions
+- [ ] **Exploratory Data Analysis**: figures, table(s), discussion
+- [ ] **Findings / Conclusions**: answers tied back to research questions
+- [ ] **Limitations & Future Work**: gaps, what you'd do with more time/data
+- [ ] **AI Use Statement**: 1–2 sentences per member or team paragraph
+- [ ] **References**: APA/MLA/footnotes
+- [ ] **Code Appendix**: `{{r codeAppend, ref.label=knitr::all_labels(), echo=TRUE, eval=FALSE}}`
+
+### Citations
+- [ ] Cite data sources
+- [ ] Cite any adapted code
+
+---
+
+## Reproducibility
+
+- [ ] GitHub repository for the project
+- [ ] README explaining how to reproduce
+- [ ] Final report renders cleanly from repo on someone else's machine
+
+---
+
+## AI Policy
+
+- [ ] AI use note in final report
+- [ ] Each team member can walk through their own code at oral checkpoints

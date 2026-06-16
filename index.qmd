@@ -1,0 +1,191 @@
+---
+title: "Video Game Film Adaptations"
+author: "Harsh, Charlie, Mason"
+date: "2026-06-15"
+format: pdf
+---
+
+```{r setup}
+#| label: setup
+#| message: false
+#| warning: false
+
+library(tidyverse)
+library(readr)
+library(janitor)
+library(scales)
+
+ggplot2::theme_set(theme_minimal(base_size = 12))
+```
+
+## Research Questions
+
+### Q1: Critic–Audience Agreement Over Time
+
+Do critics and audiences agree on video game movies, and has that gap changed over time?
+
+Compare `rotten_tomatoes` and `metacritic` against `cinema_score` (convert letter grades to numeric scale, drop `"N/A"` rows). Also plot the critic/audience gap across `release_date` to see if it narrows over time.
+
+### Q2: Publisher Size & Box Office
+
+Does publisher size predict box office success?
+
+Join external publisher revenue/size data on `original_game_publisher`. Filter to USD only (`worldwide_box_office_currency == "$"`). Adjust `worldwide_box_office` for inflation to 2024 dollars via a CPI table joined on year extracted from `release_date`.
+
+### Q3: Franchise Fatigue
+
+Does franchise fatigue exist in video game movie series?
+
+Use regex on `title` to detect both numbered sequels (`"Resident Evil 2"`) and subtitle-based sequels (`"Resident Evil: Apocalypse"`). Assign installment numbers within each franchise sorted by `release_date`. Focus on franchises with 3+ films. Plot inflation-adjusted USD box office and `rotten_tomatoes` by installment number.
+
+### Known Data Issues
+
+- Heavy NAs across score columns (`rotten_tomatoes`, `metacritic`, `cinema_score`)
+- Mixed currencies in `worldwide_box_office` and `budget_low`/`budget_high`
+- No inflation adjustment in raw data
+- `cinema_score` is a character column needing numeric conversion before analysis
+
+## Data Import
+
+```{r import}
+#| label: import
+
+game_films <- readr::read_csv(
+  "https://raw.githubusercontent.com/rfordatascience/tidytuesday/main/data/2026/2026-06-09/game_films.csv",
+  show_col_types = FALSE
+) |>
+  janitor::clean_names()
+
+glimpse(game_films)
+```
+
+## Data Preparation: Currency Standardization
+
+All monetary columns are in their *original* currency. We standardize to USD.
+
+```{r currency-lookup}
+#| label: currency-lookup
+
+fx_rates <- tibble::tribble(
+  ~currency, ~to_usd,
+  "$",        1,
+  "¥",        0.0091,
+  "£",        1.30,
+  "HK$",      0.128,
+  "NT$",      0.033
+)
+```
+
+```{r currency-convert}
+#| label: currency-convert
+
+game_films <- game_films |>
+  left_join(fx_rates, by = c("worldwide_box_office_currency" = "currency")) |>
+  mutate(
+    worldwide_box_office_usd = worldwide_box_office * to_usd
+  ) |>
+  select(-to_usd) |>
+  left_join(fx_rates, by = c("budget_currency" = "currency")) |>
+  mutate(
+    budget_low_usd  = budget_low  * to_usd,
+    budget_high_usd = budget_high * to_usd
+  ) |>
+  select(-to_usd)
+
+summary(game_films$worldwide_box_office_usd)
+```
+
+## Data Preparation: Inflation Adjustment
+
+Adjust all USD monetary columns to constant 2024 dollars using CPI-U.
+
+```{r cpi-table}
+#| label: cpi-table
+
+cpi <- tibble::tribble(
+  ~year, ~cpi,
+  1986, 109.6,
+  1987, 113.6,
+  1988, 118.3,
+  1989, 124.0,
+  1990, 130.7,
+  1991, 136.2,
+  1992, 140.3,
+  1993, 144.5,
+  1994, 148.2,
+  1995, 152.4,
+  1996, 156.9,
+  1997, 160.5,
+  1998, 163.0,
+  1999, 166.6,
+  2000, 172.2,
+  2001, 177.1,
+  2002, 179.9,
+  2003, 184.0,
+  2004, 188.9,
+  2005, 195.3,
+  2006, 201.6,
+  2007, 207.3,
+  2008, 215.3,
+  2009, 214.5,
+  2010, 218.1,
+  2011, 224.9,
+  2012, 229.6,
+  2013, 233.0,
+  2014, 236.7,
+  2015, 237.0,
+  2016, 240.0,
+  2017, 245.1,
+  2018, 251.1,
+  2019, 255.7,
+  2020, 258.8,
+  2021, 271.0,
+  2022, 292.7,
+  2023, 304.7,
+  2024, 313.7
+)
+
+cpi_2024 <- cpi$cpi[cpi$year == 2024]
+```
+
+```{r inflation-adjust}
+#| label: inflation-adjust
+
+game_films <- game_films |>
+  mutate(release_year = lubridate::year(release_date)) |>
+  left_join(cpi, by = c("release_year" = "year")) |>
+  mutate(
+    inflation_factor = cpi_2024 / cpi,
+    worldwide_box_office_usd_adj = worldwide_box_office_usd * inflation_factor,
+    budget_low_usd_adj  = budget_low_usd  * inflation_factor,
+    budget_high_usd_adj = budget_high_usd * inflation_factor
+  ) |>
+  select(-cpi, -inflation_factor)
+
+game_films |>
+  filter(!is.na(worldwide_box_office_usd)) |>
+  summarise(
+    n                    = n(),
+    raw_median           = median(worldwide_box_office, na.rm = TRUE),
+    usd_median           = median(worldwide_box_office_usd, na.rm = TRUE),
+    adj_median           = median(worldwide_box_office_usd_adj, na.rm = TRUE)
+  )
+```
+
+## Cleaned Dataset Summary
+
+```{r final-glimpse}
+#| label: final-glimpse
+
+glimpse(game_films)
+
+game_films |>
+  summarise(
+    total_films        = n(),
+    n_theatrical       = sum(category == "Theatrical releases", na.rm = TRUE),
+    n_with_box_office  = sum(!is.na(worldwide_box_office)),
+    n_with_rt          = sum(!is.na(rotten_tomatoes)),
+    n_with_cinema      = sum(!is.na(cinema_score) & cinema_score != "N/A"),
+    date_range          = paste(range(release_date, na.rm = TRUE), collapse = " to ")
+  )
+```

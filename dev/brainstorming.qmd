@@ -1,0 +1,67 @@
+---
+title: "Brainstorming — Research Questions"
+format: html
+---
+
+## Research Questions
+
+### Q1: Critic–Audience Agreement Over Time
+
+Do critics and audiences agree on video game movies, and has that gap changed over time?
+
+Compare `rotten_tomatoes` and `metacritic` against `cinema_score` (convert letter grades to numeric scale, drop `"N/A"` rows). Also plot the critic/audience gap across `release_date` to see if it narrows over time.
+
+### Q2: Publisher Size & Box Office
+
+Does publisher size predict box office success?
+
+Join external publisher revenue/size data on `original_game_publisher`. Filter to USD only (`worldwide_box_office_currency == "$"`). Adjust `worldwide_box_office` for inflation to 2024 dollars via a CPI table joined on year extracted from `release_date`.
+
+### Q3: Franchise Fatigue
+
+Does franchise fatigue exist in video game movie series?
+
+Use regex on `title` to detect both numbered sequels (`"Resident Evil 2"`) and subtitle-based sequels (`"Resident Evil: Apocalypse"`). Assign installment numbers within each franchise sorted by `release_date`. Focus on franchises with 3+ films. Plot inflation-adjusted USD box office and `rotten_tomatoes` by installment number.
+
+### Known Data Issues
+
+- Heavy NAs across score columns (`rotten_tomatoes`, `metacritic`, `cinema_score`)
+- Mixed currencies in `worldwide_box_office` and `budget_low`/`budget_high`
+- No inflation adjustment in raw data
+- `cinema_score` is a character column needing numeric conversion before analysis
+
+---
+
+## Pending Work / Responsibilities
+
+| Task | Assignee | Status |
+|------|----------|--------|
+| Convert cinema_score letter grades → numeric scale | TBD | pending |
+| Research & join external publisher revenue/size data | TBD | pending |
+| Build regex: detect numbered + subtitle-based sequels in title | TBD | pending |
+| Assign installment numbers per franchise (sorted by release_date) | TBD | pending |
+| Research historical FX rates (or justify fixed) | TBD | pending |
+| CPI data provenance write-up | TBD | pending |
+| Q1: critic-audience gap analysis + plot over time | TBD | pending |
+| Q2: publisher size → box office model | TBD | pending |
+| Q3: franchise fatigue plots (box office + RT by installment) | TBD | pending |
+| Draft Introduction & Motivation | TBD | pending |
+| Draft Data Provenance section | TBD | pending |
+| Draft Data Wrangling & Cleaning narrative (NAs, currencies, cinema_score) | TBD | pending |
+| Draft Findings / Conclusions | TBD | pending |
+| Draft Limitations & Future Work | TBD | pending |
+| Draft AI Use Statement | TBD | pending |
+| Format for PDF output (LaTeX deps) | TBD | pending |
+| Cross-reference all figures/tables in text | TBD | pending |
+| References / citations | TBD | pending |
+
+---
+
+## TBD
+
+- Publisher revenue data source: FRED? Company filings? Wikipedia?
+- Historical FX rate approach: annual averages from IMF/FRED, or fixed rates with caveat?
+- Franchise name extraction: regex must handle both `"Resident Evil 2"` (numbered) and `"Resident Evil: Apocalypse"` (subtitled) — exact patterns TBD after inspecting titles
+- Minimum franchise size for Q3: 3 films (per spec), adjust if data sparse
+- cinema_score: numeric mapping for A+ through F scale
+- CPI table source: BLS CUUR0000SA0 — verify years line up with release_date range
