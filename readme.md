@@ -1,4 +1,4 @@
-group 1? #name tbd
+Team: Pipe Dream
 Harsh Rathi 
 Mason Mitchell
 Charlie Bupp
