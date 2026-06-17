@@ -172,6 +172,52 @@ game_films |>
   )
 ```
 
+## Data Preparation: Movies Only!
+
+Keep only entries that are theatrical releases. All others lack crucial information about budget, gross earnings, and review scores.
+
+```{r theatrical-release}
+#| label: theatrical-release
+
+game_films <- game_films %>% 
+  filter(category == "Theatrical release")
+
+```
+
+## Data Preparation: Cinemascore conversion
+
+converts the Cinemascore variable to a numeric score
+
+```{r cinema-convert}
+#| label: cinema-convert
+
+cinema_score_conversion <- tibble::tribble(
+  ~cinemascore_letter, ~to_num,
+  "N/A",        NA,
+  "A+",        100,
+  "A",        91.6666,
+  "A-",      83.3333,
+  "B+",      74.9999,
+  "B",        66.6666,
+  "B-",        58.3333,
+  "C+",      49.9999,
+  "C",      41.6666,
+  "C-",        33.3333,
+  "D+",      24.9999,
+  "D",      16.6666,
+  "D-",        8.3333,
+  "F",        0,
+)
+
+game_films <- game_films %>% 
+  left_join(cinema_score_conversion, join_by("cinema_score" == "cinemascore_letter"))
+
+game_films <- game_films %>%
+  mutate(cinema_score = to_num) %>% 
+  select(-starts_with("to_num"))
+
+```
+
 ## Cleaned Dataset Summary
 
 ```{r final-glimpse}
@@ -182,7 +228,6 @@ glimpse(game_films)
 game_films |>
   summarise(
     total_films        = n(),
-    n_theatrical       = sum(category == "Theatrical releases", na.rm = TRUE),
     n_with_box_office  = sum(!is.na(worldwide_box_office)),
     n_with_rt          = sum(!is.na(rotten_tomatoes)),
     n_with_cinema      = sum(!is.na(cinema_score) & cinema_score != "N/A"),
