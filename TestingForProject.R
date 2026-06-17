@@ -117,8 +117,8 @@ game_films <- game_films |>
   select(-cpi, -inflation_factor)
 
 # MOVIE FILTERING
-game_films %>% 
-  filter(category == "Theatrical release")
+game_films <- game_films %>% 
+  filter(category == "Theatrical releases")
 
 # CINEMA SCORE CONVERSION
 game_films <- game_films %>% 
@@ -152,9 +152,21 @@ game_films |>
 # ----------------------------------------------------------------------
 
 # PRIMARY QUESTION 1: AUDIENCE V. CRITICS
-game_films %>% 
+aud_v_cri <- game_films %>% 
   filter(!is.na(rotten_tomatoes) | !is.na(metacritic), !is.na(cinema_score)) %>% 
-  ggplot(aes(x = ))
+  pivot_longer(cols = rotten_tomatoes:cinema_score, names_to = "critic_type", values_to = "score") %>% 
+  select(title, critic_type, score, release_date)
+
+aud_v_cri %>% 
+  ggplot(aes(x = release_date, y = score, color = critic_type)) +
+  geom_point() +
+  geom_smooth(se = F) +
+  labs(
+    title = "Evolution of Video Game Movies' Audience Score vs. Critic Score over Time",
+    x = "Date",
+    y = "Score",
+    color = "Critic Type"
+  )
 
 # PRIMARY QUESTION 2: PUBLISHER V. BOX OFFICE
 
