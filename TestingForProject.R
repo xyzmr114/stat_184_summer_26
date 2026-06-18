@@ -5,6 +5,8 @@ library(tidyverse)
 library(readr)
 library(janitor)
 library(scales)
+library(rvest)
+library(lubridate)
 
 # CONVERSION TABLE
 fx_rates <- tibble::tribble(
@@ -169,6 +171,18 @@ aud_v_cri %>%
   )
 
 # PRIMARY QUESTION 2: PUBLISHER V. BOX OFFICE
+
+# First we need to scrape a list of video game publishers and their net worth
+# off Wikipedia.
+company_url = "https://en.wikipedia.org/wiki/List_of_largest_video_game_companies_by_revenue"
+tables_redun <- company_url |>
+  read_html() |>
+  html_elements("table") |>
+  html_table()
+top_50 <- tables_redun[[2]]
+top_50 <- clean_names(top_50) %>% 
+  select(!ref)
+
 
 
 # PRIMARY QUESTION 3: FRANCHISE FATIGUE
