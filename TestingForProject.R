@@ -162,13 +162,14 @@ aud_v_cri <- game_films %>%
 aud_v_cri %>% 
   ggplot(aes(x = release_date, y = score, color = critic_type)) +
   geom_point() +
-  geom_smooth(se = F) +
+  geom_smooth(se = F, method = "lm") +
   labs(
     title = "Evolution of Video Game Movies' Audience Score vs. Critic Score over Time",
     x = "Date",
     y = "Score",
     color = "Critic Type"
-  )
+  ) +
+  theme(legend.position = "bottom")
 
 # PRIMARY QUESTION 2: PUBLISHER V. BOX OFFICE
 
