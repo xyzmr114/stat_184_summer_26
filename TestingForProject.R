@@ -175,14 +175,14 @@ aud_v_cri %>%
 # First we need to scrape a list of video game publishers and their net worth
 # off Wikipedia.
 company_url = "https://en.wikipedia.org/wiki/List_of_largest_video_game_companies_by_revenue"
-tables_redun <- company_url |>
+TablesRedun <- company_url |>
   read_html() |>
   html_elements("table") |>
   html_table()
 top_50 <- tables_redun[[2]]
 top_50 <- clean_names(top_50) %>% 
-  select(!ref)
-
-
+  mutate(revenue_usd_billions = parse_number(revenue_usd)) %>% 
+  select(!c(ref, revenue_usd)) %>% 
+  right_join(game_films, join_by("company" == "original_game_publisher"))
 
 # PRIMARY QUESTION 3: FRANCHISE FATIGUE
