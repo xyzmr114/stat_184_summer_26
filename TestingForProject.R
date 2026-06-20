@@ -154,11 +154,16 @@ game_films |>
 # ----------------------------------------------------------------------
 
 # PRIMARY QUESTION 1: AUDIENCE V. CRITICS
+# First we need to pare the data table down to the name, release date, and
+# review score variables. Then, we pivot longer to get all three review
+# variables under one column.
 aud_v_cri <- game_films %>% 
   filter(!is.na(rotten_tomatoes) | !is.na(metacritic), !is.na(cinema_score)) %>% 
   pivot_longer(cols = rotten_tomatoes:cinema_score, names_to = "critic_type", values_to = "score") %>% 
-  select(title, critic_type, score, release_date)
+  select(title, critic_type, score, release_date) %>% 
+  arrange(release_date)
 
+# Finally, we graph release date vs score, colored by critic type!
 aud_v_cri %>% 
   ggplot(aes(x = release_date, y = score, color = critic_type)) +
   geom_point() +
@@ -180,10 +185,67 @@ TablesRedun <- company_url |>
   read_html() |>
   html_elements("table") |>
   html_table()
-top_50 <- tables_redun[[2]]
+top_50 <- TablesRedun[[2]]
+
+# Then we take that list and join it with the game_films list, removing all nas.
 top_50 <- clean_names(top_50) %>% 
   mutate(revenue_usd_billions = parse_number(revenue_usd)) %>% 
-  select(!c(ref, revenue_usd)) %>% 
-  right_join(game_films, join_by("company" == "original_game_publisher"))
+  select(!c(ref, revenue_usd))
+top_50 <- as.data.frame(top_50) %>% 
+  right_join(game_films, join_by("company" == "original_game_publisher"), copy) %>% 
+  select(title, worldwide_box_office, company, revenue_usd_billions) %>% 
+  filter(!is.na(worldwide_box_office), !is.na(revenue_usd_billions)) %>% 
+  arrange(revenue_usd_billions)
+
+# Finally, we graph company revenue against box office earnings!
+top_50 %>% 
+  ggplot(aes(x = revenue_usd_billions, y = worldwide_box_office, color = company)) +
+  geom_point(alpha = .6, size = 4) +
+  labs(
+    title = "Company Revenue vs. Box Office Performance of Video Game Movies",
+    x = "Yearly Company Revenue (Billions)",
+    y = "Box Office Earnings (USD)",
+    color = "Company"
+  ) +
+  scale_x_log10() +
+  theme_minimal() +
+  theme(legend.position = "bottom")
 
 # PRIMARY QUESTION 3: FRANCHISE FATIGUE
+# First, we create a new variable that consists of the first word of the movie.
+# For movies that start with "The," use second word.
+MovieCount <- game_films %>% 
+  mutate(start_word = sub(" .*$", "", title)) %>% 
+  mutate(start_word = sub(":", "", start_word)) %>% 
+  # WHY DOES THIS TURN ALL THE MOVIES THAT START WITH "THE" INTO MARIO????
+  # mutate(start_word = sub("The$", str_extract(title, " .* "), start_word)) %>% 
+  select(title, release_date, worldwide_box_office_usd_adj, start_word) %>% 
+  filter(if_all(title:start_word, \(x) !is.na(x))) %>% 
+  filter(start_word != "The") %>% 
+  arrange(start_word)
+
+# Then, summarize the list to only contain the count of movies that have more than 1 entry
+MovieCountSummary <- MovieCount %>% 
+  group_by(start_word) %>% 
+  count() %>% 
+  filter(n > 1) %>% 
+  arrange(n)
+  
+# Next, utilize semi_join to only keep movies in MovieCount that start with words
+# in MovieCountSummary!
+MovieCountFinal <- semi_join(MovieCount, MovieCountSummary, join_by(start_word))
+
+# Finally, graph release date against money earned, grouping by start word!
+MovieCountFinal %>% 
+  ggplot(aes(x = release_date, y = worldwide_box_office_usd_adj, color = start_word)) +
+  geom_point(alpha = .6, size = 3) +
+  labs(
+    title = "Tracking Franchise Fatigue by First Word in Movie Title",
+    x = "Release Date (Year)",
+    y = "Box Office Earnings (USD)",
+    color = "First Word"
+  ) +
+  theme_minimal() +
+  geom_smooth(se = F, method = "lm")# + scale_y_log10()
+  
+  
