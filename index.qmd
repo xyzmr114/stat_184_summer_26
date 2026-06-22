@@ -18,7 +18,11 @@ library(scales)
 ggplot2::theme_set(theme_minimal(base_size = 12))
 ```
 
-## Research Questions
+## Introduction
+
+[Intro goes here]
+
+## Methodology
 
 ### Q1: Critic–Audience Agreement Over Time
 
@@ -234,3 +238,72 @@ game_films |>
     date_range          = paste(range(release_date, na.rm = TRUE), collapse = " to ")
   )
 ```
+
+## Question 1: Critic vs. Audience Review Scores Over Time
+
+[Reintroduce question]
+
+[Insert Data Table]
+
+[Explain Data Table]
+
+[Insert Plot]
+
+[Explain Plot]
+
+[Concluding Statements]
+
+## Question 2: Publisher Size vs. Box Office
+
+[Reintroduce question]
+
+[Insert Data Table]
+
+[Explain Data Table]
+
+[Insert Plot]
+
+[Explain Plot]
+
+[Concluding Statements]
+
+## Question 3: Franchise Fatigue
+
+[Reintroduce question]
+
+[Insert Data Table]
+
+[Explain Data Table]
+
+[Insert Plot]
+
+[Explain Plot]
+
+[Concluding Statements]
+
+## Conclusion
+
+## References
+
+[If needed]
+
+## Code Appendix
+
+```{r Code Appendix}
+
+
+```
+
+## AI Usage
+
+*Harsh Rathi:*
+
+> 
+
+*Charles Bupp:*
+
+> 
+
+*Mason Mitchell:*
+
+> 
