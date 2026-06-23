@@ -199,8 +199,9 @@ top_50 <- as.data.frame(top_50) %>%
 
 # Finally, we graph company revenue against box office earnings!
 top_50 %>% 
-  ggplot(aes(x = revenue_usd_billions, y = worldwide_box_office, color = company)) +
-  geom_point(alpha = .6, size = 4) +
+  ggplot(aes(x = revenue_usd_billions, y = worldwide_box_office)) +
+  geom_point(aes(color = company), alpha = .6, size = 4, ) +
+  geom_smooth(se = F, method = "lm") +
   labs(
     title = "Company Revenue vs. Box Office Performance of Video Game Movies",
     x = "Yearly Company Revenue (Billions)",
