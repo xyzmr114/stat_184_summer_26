@@ -63,7 +63,7 @@ game_films <- readr::read_csv(
 glimpse(game_films)
 ```
 
-## Data Preparation: Currency Standardization
+### Data Preparation: Currency Standardization
 
 All monetary columns are in their *original* currency. We standardize to USD.
 
@@ -99,7 +99,7 @@ game_films <- game_films |>
 summary(game_films$worldwide_box_office_usd)
 ```
 
-## Data Preparation: Inflation Adjustment
+### Data Preparation: Inflation Adjustment
 
 Adjust all USD monetary columns to constant 2024 dollars using CPI-U.
 
@@ -176,7 +176,7 @@ game_films |>
   )
 ```
 
-## Data Preparation: Movies Only!
+### Data Preparation: Movies Only!
 
 Keep only entries that are theatrical releases. All others lack crucial information about budget, gross earnings, and review scores.
 
@@ -188,7 +188,7 @@ game_films <- game_films %>%
 
 ```
 
-## Data Preparation: Cinemascore conversion
+### Data Preparation: Cinemascore conversion
 
 converts the Cinemascore variable to a numeric score
 
@@ -222,7 +222,7 @@ game_films <- game_films %>%
 
 ```
 
-## Cleaned Dataset Summary
+### Cleaned Dataset Summary
 
 ```{r final-glimpse}
 #| label: final-glimpse
@@ -255,18 +255,57 @@ game_films |>
 
 ## Question 2: Publisher Size vs. Box Office
 
-[Reintroduce question]
+  Aside from review scores, another question that interested us was determining if the size of a game's company was a predictor of the movie's success. Do dominant companies like Nintendo and Sony triumph over more niche businesses such as Capcom and Ubisoft? Let's find out.
 
-[Insert Data Table]
+  In order to wrangle the data into a form suitable for answering this question, we need to find data that actually represents the size of a company. It would be unfeasible to manually create a supplement data frame containing every company included in game_films, so instead we look to the wider internet!
 
-[Explain Data Table]
+  If we reasonably assume that larger companies are more likely to spend the money to create movies of their IPs, then perhaps a list of the fifty most successful video game companies will share an adequate amount of names with our data. That is why we turned to Wikipedia's list of that metric. It can be found here:
+  
+> https://en.wikipedia.org/wiki/List_of_largest_video_game_companies_by_revenue
 
-[Insert Plot]
+  After scraping the data and joining it to game_films, we were left with 36 matched entries after filtering out all entries with missing data. A list of this table can be seen below.
 
-[Explain Plot]
+```{r company-size-table}
+company_url = "https://en.wikipedia.org/wiki/List_of_largest_video_game_companies_by_revenue"
+TablesRedun <- company_url |>
+  read_html() |>
+  html_elements("table") |>
+  html_table()
+top_50 <- TablesRedun[[2]]
+top_50 <- clean_names(top_50) %>% 
+  mutate(revenue_usd_billions = parse_number(revenue_usd)) %>% 
+  select(!c(ref, revenue_usd))
+top_50 <- as.data.frame(top_50) %>% 
+  right_join(game_films, join_by("company" == "original_game_publisher"), copy) %>% 
+  select(title, worldwide_box_office, company, revenue_usd_billions) %>% 
+  filter(!is.na(worldwide_box_office), !is.na(revenue_usd_billions)) %>% 
+  arrange(title)
+top_50 %>% 
+  head(10)
+```
 
-[Concluding Statements]
+  Taking a look at the first ten entries of this table, we can see that the resulting data frame includes companies ranging from Ubisoft to Sega to Square Enix and beyond. In order to get a clear picture of how each company did, refer to the following plot.
 
+```{r company-size-plot}
+top_50 %>% 
+  ggplot(aes(x = revenue_usd_billions, y = worldwide_box_office)) +
+  geom_point(aes(color = company), alpha = .6, size = 4, ) +
+  geom_smooth(se = F, method = "lm") +
+  labs(
+    title = "Company Revenue vs. Box Office Performance of Video Game Movies",
+    x = "Yearly Company Revenue (Billions)",
+    y = "Box Office Earnings (USD)",
+    color = "Company"
+  ) +
+  scale_x_log10() +
+  theme_minimal() +
+  theme(legend.position = "bottom")
+```
+
+  Of the eight companies represented in this plot, we can see that the spread of movie success doesn't really change as x (the annual company revenue) increases. All of the companies seem to hover between the million and hundred-million range for box office performance with the exception of Nintendo's Super Mario and Super Mario Galaxy movies, which are special cases due to their significance. Because of these two outliers, the fitted line seems to show a general increase where one doesn't really exist.
+  
+  In summary, the size of the publishing company doesn't seem to play a noticable factor in the earnings of a movie based on one of their IPs. Larger companies do about the same as smaller ones.
+  
 ## Question 3: Franchise Fatigue
 
 [Reintroduce question]
@@ -296,14 +335,14 @@ game_films |>
 
 ## AI Usage
 
-*Harsh Rathi:*
+**Harsh Rathi:**
 
 > 
 
-*Charles Bupp:*
+**Charles Bupp:**
 
 > 
 
-*Mason Mitchell:*
+**Mason Mitchell:**
 
 > 
