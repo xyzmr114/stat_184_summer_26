@@ -1,0 +1,69 @@
+name: Render Quarto PDF
+
+on:
+  push:
+    branches: [main, harsh]
+  pull_request:
+    branches: [main]
+
+jobs:
+  render:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Set up Quarto
+        uses: quarto-dev/quarto-actions/setup@v2
+
+      - name: Set up R
+        uses: r-lib/actions/setup-r@v2
+        with:
+          r-version: '4.4.0'
+          use-public-rspm: true
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libcurl4-openssl-dev libssl-dev libxml2-dev libfontconfig1-dev libharfbuzz-dev libfribidi-dev libfreetype6-dev libpng-dev libtiff5-dev libjpeg-dev
+
+      - name: Cache R packages
+        uses: actions/cache@v4
+        with:
+          path: ${{ env.R_LIBS_USER }}
+          key: ${{ runner.os }}-r-4.4.0-${{ hashFiles('**/DESCRIPTION') }}-v1
+          restore-keys: |
+            ${{ runner.os }}-r-4.4.0-
+
+      - name: Install R packages
+        run: |
+          install.packages(c(
+            "tidyverse", "readr", "janitor", "scales",
+            "rvest", "lubridate", "ggcorrplot", "patchwork",
+            "ggridges", "kableExtra", "viridis"
+          ), repos = "https://cloud.r-project.org")
+        shell: Rscript {0}
+
+      - name: Install TinyTeX (for PDF rendering)
+        run: |
+          quarto install tinytex
+
+      - name: Render index.qmd to PDF
+        run: quarto render index.qmd --to pdf
+
+      - name: Upload PDF as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: index-pdf
+          path: index.pdf
+          retention-days: 30
+
+      - name: Commit rendered PDF back to repo
+        if: github.event_name == 'push'
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          git add index.pdf
+          git diff --staged --quiet || git commit -m "ci: render index.pdf [skip ci]"
+          git push
