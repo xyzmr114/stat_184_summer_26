@@ -23,16 +23,17 @@ library(ggridges)
 library(kableExtra)
 library(viridis)
 
+knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE)
 ggplot2::theme_set(theme_minimal(base_size = 12))
 ```
 
 ## Introduction & Motivation
 
-Video game film adaptations sit in a strange spot. The genre has been around since the 1980s and most of it has been bad. Really bad. But every once in a while, something breaks through. In 2023, *The Super Mario Bros. Movie* pulled in $1.3 billion. That same dataset includes 1993's *Super Mario Bros.*, widely considered one of the worst films ever made. The same IP. Three decades apart. Two completely different outcomes.
+Video game movies have a reputation, and it's mostly earned. The genre goes back to the 1980s, and for most of that stretch it was a punchline more than a category. Then once in a while a movie actually works. *The Super Mario Bros. Movie* pulled in $1.3 billion in 2023, off the same character that anchored 1993's *Super Mario Bros.*, a film that regularly shows up on worst-of-all-time lists. Same IP, three decades apart, two totally different outcomes. That gap is basically what got us interested in this dataset in the first place.
 
-The track record is rough. *Street Fighter* (1994) tanked. *Monster Hunter* (2020) came and went. The *Resident Evil* reboot from 2021 didn't land either. But some titles did fine. Some did great. What explains the difference?
+The misses keep coming even now. *Street Fighter* tanked in 1994, *Monster Hunter* came and went without much notice in 2020, and the 2021 *Resident Evil* reboot didn't do much better. But plenty of other adaptations have done fine, and a handful have done great, so something is clearly separating the hits from the misses.
 
-We wanted to look at three things. Do critics and audiences agree on these films? Does a big publisher with deep pockets automatically mean a big box office return? And do these franchises burn out over time the way standard Hollywood series do? The dataset goes back to 1986, which gives us enough runway to look at all three questions.
+We picked three angles to chase that down: whether critics and audiences even agree on these films, whether a publisher's size actually predicts box office, and whether these franchises burn out the same way ordinary Hollywood series do. The dataset runs from 1986 to 2024, which is enough runway to dig into all three.
 
 ## Research Questions
 
@@ -48,7 +49,7 @@ We focused on three questions:
 
 ### Primary Dataset
 
-Our main data source is the TidyTuesday *Game Films* dataset from June 9, 2026, hosted on the `rfordatascience/tidytuesday` GitHub repo. The data was scraped from Wikipedia's "List of films based on video games." Each row is one film adaptation.
+Our main data source is the TidyTuesday *Game Films* dataset from June 9, 2026, hosted on the rfordatascience/tidytuesday GitHub repo. The data was scraped from Wikipedia's "List of films based on video games." Each row is one film adaptation.
 
 The raw dataset has 439 rows and 19 variables: title, release date, category (theatrical, direct-to-video, TV, etc.), original game publisher, worldwide box office with currency label, budget bounds, Rotten Tomatoes score, Metacritic score, CinemaScore audience grade, and distributor info.
 
@@ -58,7 +59,7 @@ We added two external sources:
 
 - **CPI-U Inflation Data**: U.S. Bureau of Labor Statistics CPI-U annual averages, 1986 to 2024. We used these to adjust all dollar amounts to 2024 dollars so we could compare box office across decades.
 
-- **Publisher Revenue Data**: Wikipedia's "List of largest video game companies by revenue," scraped with the `rvest` package. This gives estimated yearly revenue for major publishers, which we used as a proxy for company size.
+- **Publisher Revenue Data**: Wikipedia's "List of largest video game companies by revenue," scraped directly from the page. This gives estimated yearly revenue for major publishers, which we used as a proxy for company size.
 
 ```{r provenance-load}
 #| label: provenance-load
@@ -73,15 +74,15 @@ game_films <- readr::read_csv(
 
 ## Data Wrangling & Cleaning
 
-We ran several cleaning steps to get the data ready. We describe each one below. The matching code is in the Code Appendix.
+We ran several cleaning steps to get the data ready. We describe each one below.
 
 ### Variable Selection
 
-We kept all the original variables. Each one was used in at least one of our questions. The main ones: `title` for finding franchises, `release_date` for time trends, `original_game_publisher` for the publisher-size question, the box office and budget columns for financial analysis, and `rotten_tomatoes`, `metacritic`, and `cinema_score` for the critic-audience comparison.
+We kept all the original variables. Each one was used in at least one of our questions. The main ones: film title for finding franchises, release date for time trends, original game publisher for the publisher-size question, the box office and budget columns for financial analysis, and Rotten Tomatoes, Metacritic, and CinemaScore for the critic-audience comparison.
 
 ### Currency Standardization
 
-The raw monetary values use their original currencies, marked by a separate currency column. We converted everything to USD with the exchange rates below:
+The raw monetary values use their original currencies, marked by a separate currency column. We converted everything to USD with the exchange rates below, taken from the Federal Reserve's H.10 Foreign Exchange Rates release as of June 22, 2026:
 
 ```{r currency-table}
 #| label: currency-table
@@ -98,11 +99,11 @@ fx_rates <- tibble::tribble(
 
 fx_rates |>
   rename(Currency = currency, `USD per Unit` = to_usd) |>
-  kable(caption = "Exchange rates used for currency standardization", digits = 4) |>
+  kable(caption = "Exchange rates used for currency standardization (Federal Reserve H.10 release, as of 2026-06-22)", digits = 4) |>
   kable_styling(bootstrap_options = c("striped", "condensed"), full_width = FALSE)
 ```
 
-We joined this table to the main dataset on both `worldwide_box_office_currency` and `budget_currency`. This created new USD columns: `worldwide_box_office_usd`, `budget_low_usd`, and `budget_high_usd`.
+We joined this table to the main dataset on the original currency labels for both box office and budget figures. This created new columns holding box office and budget figures in USD.
 
 ```{r currency-convert}
 #| label: currency-convert
@@ -122,7 +123,7 @@ game_films <- game_films |>
 
 ### Inflation Adjustment
 
-Comparing box office across decades means adjusting for inflation. We added a CPI-U table, matched on the year from `release_date`, and multiplied all USD amounts by `CPI_2024 / CPI_year`. This puts everything in constant 2024 dollars. A dollar earned in 1993 counts the same as a dollar earned in 2024.
+Comparing box office across decades means adjusting for inflation. We added a CPI-U table, matched on the year a film was released, and scaled every dollar amount by the ratio of the 2024 CPI to that year's CPI. This puts everything in constant 2024 dollars. A dollar earned in 1993 counts the same as a dollar earned in 2024.
 
 ```{r cpi-data}
 #| label: cpi-data
@@ -170,7 +171,7 @@ game_films <- game_films %>%
 
 ### CinemaScore Conversion
 
-The `cinema_score` column stores letter grades (A+ to F) as text, plus `"N/A"` for films with no score. To run numbers on it, we mapped each letter to a 0 to 100 scale. Films with `"N/A"` got `NA` and were left out of any analysis that needs audience scores.
+The CinemaScore column stores letter grades (A+ to F) as text, plus a not-available marker for films with no score. To run numbers on it, we mapped each letter to a 0 to 100 scale. Films with no score were left out of any analysis that needs audience scores.
 
 ```{r cinema-convert}
 #| label: cinema-convert
@@ -204,19 +205,20 @@ After all cleaning, the dataset is theatrical-release video game films with stan
 
 game_films |>
   summarise(
-    `Total Films`               = n(),
-    `Films with Box Office Data` = sum(!is.na(worldwide_box_office_usd_adj)),
-    `Films with RT Score`        = sum(!is.na(rotten_tomatoes)),
-    `Films with Metacritic`      = sum(!is.na(metacritic)),
-    `Films with CinemaScore`     = sum(!is.na(cinema_score)),
-    `Date Range`                 = paste(range(release_date, na.rm = TRUE), collapse = " to ")
+    `Total Films`     = n(),
+    `Box Office Data` = sum(!is.na(worldwide_box_office_usd_adj)),
+    `RT Score`        = sum(!is.na(rotten_tomatoes)),
+    `Metacritic`      = sum(!is.na(metacritic)),
+    `CinemaScore`     = sum(!is.na(cinema_score)),
+    `Date Range`      = paste(range(release_date, na.rm = TRUE), collapse = " to ")
   ) |>
   kable(
     caption = "Overview of the cleaned dataset after all preparation steps",
     digits  = 0,
     align   = "l"
   ) |>
-  kable_styling(bootstrap_options = c("striped", "hover", "condensed"), full_width = FALSE, font_size = 10)
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed"), full_width = FALSE,
+                font_size = 10, latex_options = c("scale_down"))
 ```
 
 ## Exploratory Data Analysis
@@ -256,12 +258,36 @@ game_films |>
     metacritic                  = "Metacritic",
     cinema_score                = "CinemaScore"
   )) |>
-  kable(digits = 1, align = c("l", rep("r", 5))) |>
+  kable(digits = 1, align = c("l", rep("r", 5)), format.args = list(big.mark = ",")) |>
   kable_styling(bootstrap_options = c("striped", "hover", "condensed"), full_width = FALSE) |>
   row_spec(0, bold = TRUE)
 ```
 
 Box office values span from near zero to over a billion dollars after inflation adjustment. The distribution is heavily right-skewed, which is common for entertainment industry money. Critic scores (Rotten Tomatoes and Metacritic) average in the 40 to 50 range, so video game films mostly get lukewarm to bad reviews. CinemaScore audience grades land around 60 on our 0 to 100 scale. That is a lot higher than critic scores, which points toward the gap we look at in Q1.
+
+![Distribution of the five key numeric variables. Each panel has its own scale.](images/fig-desc-boxplot.png){#fig-desc-boxplot}
+
+@fig-desc-boxplot shows the same story as the table: box office and budget are both right-skewed with a handful of high-end outliers, while the three score variables are roughly centered with CinemaScore sitting noticeably higher than the two critic scores.
+
+```{r best-worst-table}
+#| label: tbl-best-worst
+#| tbl-cap: "Best and worst performing films by box office and critic score"
+
+best_worst <- tibble::tribble(
+  ~Category, ~Film, ~Value,
+  "Highest box office (adj.)",  game_films$title[which.max(game_films$worldwide_box_office_usd_adj)],  scales::dollar(max(game_films$worldwide_box_office_usd_adj, na.rm = TRUE)),
+  "Lowest box office (adj.)",   game_films$title[which.min(game_films$worldwide_box_office_usd_adj)],  scales::dollar(min(game_films$worldwide_box_office_usd_adj, na.rm = TRUE)),
+  "Highest Rotten Tomatoes",    game_films$title[which.max(game_films$rotten_tomatoes)],                paste0(max(game_films$rotten_tomatoes, na.rm = TRUE), "/100"),
+  "Lowest Rotten Tomatoes",     game_films$title[which.min(game_films$rotten_tomatoes)],                paste0(min(game_films$rotten_tomatoes, na.rm = TRUE), "/100")
+)
+
+best_worst |>
+  kable(align = c("l", "l", "r")) |>
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed"), full_width = FALSE) |>
+  row_spec(0, bold = TRUE)
+```
+
+@tbl-best-worst puts names to the extremes. *The Super Mario Bros. Movie* is the highest grossing film in the dataset after inflation adjustment, and *Resident Evil: Damnation* is the best reviewed on Rotten Tomatoes. On the other end, *Resident Evil: Death Island* made almost nothing at the box office, and *Tekken* sits at a 0 on Rotten Tomatoes, the lowest score in the dataset.
 
 ---
 
@@ -271,78 +297,19 @@ Our first question: do critics and audiences agree on video game films? Has the 
 
 @fig-q1-scatter plots all three against release date with loess-smoothed trend lines and 95% confidence bands.
 
-```{r fig-q1-scatter}
-#| label: fig-q1-scatter
-#| fig-cap: "Critic and audience scores over time for video game film adaptations, 1986 to 2024. Loess-smoothed trends with 95% confidence bands."
-#| echo: false
-#| fig-width: 9
-#| fig-height: 5
+![Critic and audience scores over time for video game film adaptations, 1986 to 2024. Loess-smoothed trends with 95% confidence bands.](images/fig-q1-scatter.png){#fig-q1-scatter}
 
-aud_v_cri <- game_films %>%
-  filter(!is.na(rotten_tomatoes) | !is.na(metacritic), !is.na(cinema_score)) %>%
-  pivot_longer(cols = rotten_tomatoes:cinema_score, names_to = "critic_type", values_to = "score") %>%
-  select(title, critic_type, score, release_date)
-
-critic_colors <- c(
-  "rotten_tomatoes" = "#E63946",
-  "metacritic"      = "#457B9D",
-  "cinema_score"    = "#2A9D8F"
-)
-
-critic_labels <- c(
-  "rotten_tomatoes" = "Rotten Tomatoes (Critic)",
-  "metacritic"      = "Metacritic (Critic)",
-  "cinema_score"    = "CinemaScore (Audience)"
-)
-
-aud_v_cri %>%
-  ggplot(aes(x = release_date, y = score, color = critic_type)) +
-  geom_point(alpha = 0.5, size = 2.5) +
-  geom_smooth(se = TRUE, method = "loess", span = 0.6, alpha = 0.15) +
-  scale_color_manual(values = critic_colors, labels = critic_labels) +
-  scale_x_date(date_breaks = "5 years", date_labels = "%Y") +
-  labs(x = "Release Date", y = "Score", color = "Score Type") +
-  theme_minimal(base_size = 13) +
-  theme(legend.position = "bottom", panel.grid.minor = element_blank())
-```
-
-A few things stand out in @fig-q1-scatter. CinemaScore (audience) ratings sit above both critic metrics across the whole timeline. The loess CinemaScore trend runs between 60 and 70. Rotten Tomatoes and Metacritic cluster in the 40 to 55 range. Audiences rate these films 10 to 20 points higher than critics, and this has been true since the start. All three score types also show a slow upward trend after about 2010. That might be because studios started taking video game adaptations more seriously after the early failures, though we have no direct way to test that.
+A few things stand out in @fig-q1-scatter. CinemaScore (audience) ratings sit above both critic metrics across the whole timeline. The loess CinemaScore trend runs between 60 and 70. Rotten Tomatoes and Metacritic cluster in the 40 to 55 range. Audiences rate these films about 28 points higher than critics on average, and this has been true since the start. All three score types also show a slow upward trend after about 2010. That might be because studios started taking video game adaptations more seriously after the early failures, though we have no direct way to test that.
 
 To measure the gap directly, @fig-q1-gap shows the difference between average critic scores (mean of Rotten Tomatoes and Metacritic) and CinemaScore. Points above zero mean critics scored higher. Points below mean audiences scored higher.
 
-```{r fig-q1-gap}
-#| label: fig-q1-gap
-#| fig-cap: "Critic-audience score gap over time. Positive values indicate critics rated films higher than audiences; negative values indicate the reverse."
-#| echo: false
-#| fig-width: 9
-#| fig-height: 5
+![Critic-audience score gap over time. Positive values indicate critics rated films higher than audiences; negative values indicate the reverse.](images/fig-q1-gap.png){#fig-q1-gap}
 
-aud_v_cri_gap <- game_films %>%
-  filter(!is.na(rotten_tomatoes) | !is.na(metacritic), !is.na(cinema_score)) %>%
-  mutate(
-    avg_critic = rowMeans(cbind(rotten_tomatoes, metacritic), na.rm = TRUE),
-    gap = avg_critic - cinema_score
-  ) %>%
-  filter(!is.na(gap))
+@fig-q1-gap shows most films fall below zero. Audiences rate these movies higher than critics almost every time, only 4 of the 51 films with both scores have critics rating higher. The loess trend suggests the gap has narrowed a bit since 2010, though the confidence band gets wider in recent years because there are fewer data points. Four decades of negative gaps point to a real split between how paid critics and regular moviegoers judge video game films.
 
-aud_v_cri_gap %>%
-  ggplot(aes(x = release_date, y = gap)) +
-  geom_hline(yintercept = 0, linetype = "dashed", color = "gray40", linewidth = 0.8) +
-  geom_point(aes(fill = gap > 0), size = 2.5, alpha = 0.7, shape = 21, color = "white") +
-  geom_smooth(method = "loess", se = TRUE, color = "#E63946", fill = "#E63946", alpha = 0.15) +
-  scale_fill_manual(
-    values = c("TRUE" = "#2A9D8F", "FALSE" = "#E76F51"),
-    labels = c("TRUE" = "Critics Higher", "FALSE" = "Audience Higher")
-  ) +
-  scale_x_date(date_breaks = "5 years", date_labels = "%Y") +
-  labs(x = "Release Date", y = "Gap (Critic-Audience)", fill = "Direction") +
-  theme_minimal(base_size = 13) +
-  theme(legend.position = "bottom", panel.grid.minor = element_blank())
-```
+Part of this is a known quirk of CinemaScore itself, not just a video-game-movie thing. CinemaScore only surveys people who already paid to see a film opening night, so the sample skews toward people predisposed to like what they are about to watch. In this dataset, 38 of the 51 scored films (about 75%) got a CinemaScore of B- or better. Critics, by contrast, are reviewing the film on its merits rather than reacting as a self-selected fan in the seat. That structural difference in who is doing the rating, not just a difference in taste, explains a meaningful chunk of the gap.
 
-@fig-q1-gap shows most films fall below zero. Audiences rate these movies higher than critics almost every time. The loess trend suggests the gap has narrowed a bit since 2010, though the confidence band gets wider in recent years because there are fewer data points. Four decades of negative gaps point to a real split between how paid critics and regular moviegoers judge video game films.
-
-**Key findings for Q1**: Audiences rate video game films higher than critics by about 10 to 20 points. That gap has narrowed a little since 2010. All score types trended up over the same period, so the genre might be getting better, or at least better received.
+**Key findings for Q1**: Audiences rate video game films higher than critics by about 28 points on average. That gap has narrowed a little since 2010. All score types trended up over the same period, so the genre might be getting better, or at least better received.
 
 ---
 
@@ -356,8 +323,7 @@ To check, we scraped Wikipedia's list of the largest video game companies by yea
 
 ```{r tbl-publisher-performance}
 #| label: tbl-publisher-performance
-#| tbl-cap: "Publisher Performance: Aggregated Box Office and Critic Metrics (publishers with 3+ matched films)"
-#| echo: false
+#| tbl-cap: "Publisher performance, 3+ matched films, sorted by mean box office"
 
 # Scrape and join publisher data
 company_url <- "https://en.wikipedia.org/wiki/List_of_largest_video_game_companies_by_revenue"
@@ -378,74 +344,41 @@ table_data <- pub_joined %>%
   filter(!is.na(worldwide_box_office_usd_adj)) %>%
   group_by(company) %>%
   summarise(
-    `# Films`                 = n(),
-    `Median Box Office (M USD)` = round(median(worldwide_box_office_usd_adj) / 1e6, 1),
-    `Mean Box Office (M USD)`   = round(mean(worldwide_box_office_usd_adj) / 1e6, 1),
-    `Mean RT Score`             = round(mean(rotten_tomatoes, na.rm = TRUE), 1),
-    `Mean CinemaScore`          = round(mean(cinema_score, na.rm = TRUE), 1),
+    `Films`     = n(),
+    `Med BO`    = round(median(worldwide_box_office_usd_adj) / 1e6, 1),
+    `Mean BO`   = round(mean(worldwide_box_office_usd_adj) / 1e6, 1),
+    `Mean RT`   = round(mean(rotten_tomatoes, na.rm = TRUE), 1),
+    `Mean CS`   = round(mean(cinema_score, na.rm = TRUE), 1),
     .groups = "drop"
   ) %>%
-  filter(`# Films` >= 3) %>%
-  arrange(desc(`Mean Box Office (M USD)`))
+  filter(`Films` >= 3) %>%
+  arrange(desc(`Mean BO`)) %>%
+  rename(Publisher = company) %>%
+  mutate(
+    Publisher = str_replace_all(Publisher, fixed("|"), "/"),
+    `Mean RT` = ifelse(is.nan(`Mean RT`), "N/A", as.character(`Mean RT`)),
+    `Mean CS` = ifelse(is.nan(`Mean CS`), "N/A", as.character(`Mean CS`))
+  )
 
 table_data %>%
-  kable(digits = 1, align = c("l", rep("r", 5))) %>%
-  kable_styling(bootstrap_options = c("striped", "hover", "condensed"), full_width = FALSE) %>%
-  row_spec(0, bold = TRUE, color = "white", background = "#2A9D8F")
+  kable(digits = 1, align = c("l", rep("r", 5)), format.args = list(big.mark = ",")) %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed"), full_width = FALSE,
+                font_size = 9, latex_options = c("scale_down")) %>%
+  column_spec(1, width = "4.5cm") %>%
+  row_spec(0, bold = TRUE, color = "white", background = "#2A9D8F") %>%
+  footnote(general = "BO = inflation-adjusted box office in millions USD. CS = CinemaScore.",
+           general_title = "", footnote_as_chunk = TRUE)
 ```
 
 @fig-q2-multivariate is our 3+ variable figure. It packs four variables into one plot: publisher revenue (x axis, log scale), inflation-adjusted box office (y axis, log scale), publisher identity (color), and film budget (point size).
 
-```{r fig-q2-multivariate}
-#| label: fig-q2-multivariate
-#| fig-cap: "Publisher revenue vs. box office performance (3+ variable figure). Color = publisher, point size = budget, x = company annual revenue, y = inflation-adjusted box office."
-#| echo: false
-#| fig-width: 9
-#| fig-height: 6
-
-pub_joined %>%
-  filter(!is.na(worldwide_box_office_usd_adj), !is.na(revenue_usd_billions), !is.na(budget_high_usd_adj)) %>%
-  ggplot(aes(x = revenue_usd_billions,
-             y = worldwide_box_office_usd_adj / 1e6,
-             color = company,
-             size  = budget_high_usd_adj / 1e6)) +
-  geom_point(alpha = 0.75) +
-  geom_smooth(aes(group = 1), method = "lm", se = TRUE, color = "gray30",
-              linewidth = 0.8, linetype = "dashed", alpha = 0.2) +
-  scale_color_viridis_d(option = "turbo", guide = guide_legend(ncol = 2)) +
-  scale_size_continuous(name = "Budget (M USD)", labels = dollar_format(), range = c(2, 10)) +
-  scale_x_log10(labels = dollar_format(suffix = "B")) +
-  scale_y_log10(labels = dollar_format(suffix = "M")) +
-  labs(
-    x = "Yearly Company Revenue (USD Billions, log scale)",
-    y = "Inflation-Adjusted Box Office (M USD, log scale)",
-    color = "Publisher"
-  ) +
-  theme_minimal(base_size = 13) +
-  theme(legend.position = "bottom", panel.grid.minor = element_blank())
-```
+![Publisher revenue vs. box office performance (3+ variable figure). Color = publisher, point size = budget, x = company annual revenue, y = inflation-adjusted box office.](images/fig-q2-multivariate.png){#fig-q2-multivariate}
 
 The dashed LM line in @fig-q2-multivariate shows a very weak link between publisher revenue and box office. The two biggest earners in the sample are both Nintendo's *Super Mario* films, and Nintendo is one of the largest publishers by revenue. But most publishers cluster in a narrow band of box office numbers no matter their size. @fig-q2-ridge shows the same pattern another way with a ridgeline density plot of box office distributions.
 
-```{r fig-q2-ridge}
-#| label: fig-q2-ridge
-#| fig-cap: "Distribution of inflation-adjusted box office earnings by publisher. Ridgeline density plot on a log scale."
-#| echo: false
-#| fig-width: 9
-#| fig-height: 5
+![Distribution of inflation-adjusted box office earnings by publisher, limited to publishers with 3+ matched films. Ridgeline density plot on a log scale.](images/fig-q2-ridge.png){#fig-q2-ridge}
 
-pub_joined %>%
-  filter(!is.na(worldwide_box_office_usd_adj), !is.na(revenue_usd_billions)) %>%
-  mutate(company = fct_reorder(company, revenue_usd_billions, .desc = TRUE)) %>%
-  ggplot(aes(x = worldwide_box_office_usd_adj / 1e6, y = company, fill = company)) +
-  geom_density_ridges(alpha = 0.8, scale = 1.2) +
-  scale_fill_viridis_d(option = "turbo", guide = "none") +
-  scale_x_log10(labels = dollar_format(suffix = "M")) +
-  labs(x = "Inflation-Adjusted Box Office (M USD, log scale)", y = "Publisher") +
-  theme_minimal(base_size = 13)
-```
-
-A few things jump out. Nintendo's distribution has a huge rightward skew from the *Super Mario* films but also includes lower earners. Capcom, Square Enix, and Sega each show multiple modes, reflecting the uneven performance of their different franchises. The earnings distributions overlap heavily across publishers of very different sizes, which backs up what we saw in @fig-q2-multivariate.
+@fig-q2-ridge drops down to the four publishers with enough matched films to estimate a real distribution (Nintendo, Sony Interactive Entertainment, Bandai Namco Entertainment, and Electronic Arts only had one or two matches each, too few to plot a density). Capcom, Square Enix, and Sega each show multiple modes, reflecting the uneven performance of their different franchises. Ubisoft's distribution is bimodal too, with a cluster of smaller films and a separate cluster of bigger ones. The earnings distributions overlap heavily across these publishers, which backs up what we saw in @fig-q2-multivariate.
 
 **Key findings for Q2**: A publisher's yearly revenue does not predict box office success very well. The biggest publishers do land occasional hits (Nintendo's *Super Mario* films), but smaller publishers like Capcom and Square Enix have put up comparable numbers. Which IP gets adapted and who makes the film seem to matter more than the size of the company behind it.
 
@@ -455,153 +388,41 @@ A few things jump out. Nintendo's distribution has a huge rightward skew from th
 
 Our third question: do video game film franchises burn out? That is, do later installments make less money and get worse reviews? This pattern shows up a lot in regular Hollywood franchises but hasn't been studied much for video game adaptations.
 
-We found franchises by pulling the first meaningful word from each title (after dropping leading "The," "A," and "An") and grouping films that share that word. We numbered installments by release date within each group. We only kept franchises with three or more theatrical films. This gave us *Resident Evil*, *Pokemon*, *Mortal Kombat*, *Silent Hill*, and several others.
+We found franchises by pulling the first meaningful word from each title (after dropping leading "The," "A," and "An") and grouping films that share that word. We numbered installments by release date within each group. We only kept franchises with three or more theatrical films. This gave us *Resident Evil*, *Pokemon*, *Mortal Kombat*, *Sonic*, *Street Fighter*, and others.
 
-@fig-q3-box-office plots inflation-adjusted box office by installment, with individual trend lines per franchise and an overall LM trend.
+@fig-q3-box-office shows inflation-adjusted box office for each franchise as bars placed at their actual release date, so installments read left to right in chronological order.
 
-```{r fig-q3-box-office}
-#| label: fig-q3-box-office
-#| fig-cap: "Inflation-adjusted box office by installment number for major video game film franchises (3+ films). Faceted by franchise with log-scale y-axis."
-#| echo: false
-#| fig-width: 10
-#| fig-height: 7
+![Inflation-adjusted box office by release date for major video game film franchises (3+ films). Faceted by franchise, each on its own scale.](images/fig-q3-bar.png){#fig-q3-box-office}
 
-MovieCount <- game_films %>%
-  mutate(
-    title_clean = str_remove(title, "^(The|A|An) "),
-    start_word  = str_extract(title_clean, "^[^ ]+")
-  ) %>%
-  select(title, start_word, release_date, worldwide_box_office_usd_adj, rotten_tomatoes) %>%
-  filter(if_all(everything(), \(x) !is.na(x)))
+@fig-q3-box-office makes the swings within each franchise easy to read. *Sonic* is the cleanest growth story in the dataset: every film outearned the last. *Resident Evil*, with six theatrical films, bounces between very large and very small installments rather than declining steadily, so "fatigue" undersells how uneven that series has been. *Pokemon* stayed fairly flat across most entries before a late installment broke far above the rest.
 
-MovieCountSummary <- MovieCount %>%
-  group_by(start_word) %>%
-  count() %>%
-  filter(n >= 3) %>%
-  arrange(desc(n))
+As a second look at the same question, @fig-q3-charlie plots every franchise together on one shared timeline by release date, with a linear trend fit per franchise and no confidence band.
 
-MovieCountFinal <- semi_join(MovieCount, MovieCountSummary, join_by(start_word)) %>%
-  group_by(start_word) %>%
-  mutate(installment = rank(release_date)) %>%
-  ungroup()
+![Franchise box office over time, all franchises on one timeline (release date vs. inflation-adjusted box office), with a per-franchise linear trend.](images/fig-q3-charlie.png){#fig-q3-charlie}
 
-MovieCountFinal %>%
-  ggplot(aes(x = installment, y = worldwide_box_office_usd_adj / 1e6)) +
-  geom_point(aes(color = start_word), size = 3, alpha = 0.8) +
-  geom_smooth(aes(group = 1), method = "lm", se = TRUE, color = "gray30",
-              linetype = "dashed", linewidth = 0.8, alpha = 0.2) +
-  geom_line(aes(group = start_word, color = start_word), linewidth = 0.5, alpha = 0.4) +
-  scale_color_viridis_d(option = "turbo", guide = "none") +
-  scale_y_log10(labels = dollar_format(suffix = "M")) +
-  facet_wrap(~ reorder(start_word, -worldwide_box_office_usd_adj), scales = "free_y") +
-  labs(x = "Installment Number", y = "Inflation-Adjusted Box Office (M USD, log scale)") +
-  theme_minimal(base_size = 12) +
-  theme(strip.text = element_text(face = "bold"), panel.grid.minor = element_blank())
-```
-
-@fig-q3-box-office gives a mixed picture. The overall LM line slopes gently down, which fits the fatigue idea. But the individual franchises tell different stories. *Resident Evil*, with six theatrical films, shows a clear drop across the series. *Pokemon* films are more up and down: strong early entries, then a slide later.
+@fig-q3-charlie agrees with the faceted view on the main point: there is no single direction for the genre. *Sonic* trends up, *Street* and *Mortal* trend down, and *Resident Evil* and *Pokemon* sit in between with their trend lines roughly flat once everything is overlaid on the same axis.
 
 @fig-q3-rt checks whether Rotten Tomatoes scores follow the same pattern.
 
-```{r fig-q3-rt}
-#| label: fig-q3-rt
-#| fig-cap: "Rotten Tomatoes critic score by installment number for major video game film franchises."
-#| echo: false
-#| fig-width: 10
-#| fig-height: 7
+![Rotten Tomatoes critic score by installment number for major video game film franchises.](images/fig-q3-rt.png){#fig-q3-rt}
 
-MovieCountFinal %>%
-  ggplot(aes(x = installment, y = rotten_tomatoes)) +
-  geom_point(aes(color = start_word), size = 3, alpha = 0.8) +
-  geom_smooth(aes(group = 1), method = "lm", se = TRUE, color = "gray30",
-              linetype = "dashed", linewidth = 0.8, alpha = 0.2) +
-  geom_line(aes(group = start_word, color = start_word), linewidth = 0.5, alpha = 0.4) +
-  scale_color_viridis_d(option = "turbo", guide = "none") +
-  facet_wrap(~ reorder(start_word, -rotten_tomatoes), scales = "free_y") +
-  labs(x = "Installment Number", y = "Rotten Tomatoes Score") +
-  theme_minimal(base_size = 12) +
-  theme(strip.text = element_text(face = "bold"), panel.grid.minor = element_blank())
-```
+Critic scores show no single direction once you look franchise by franchise. *Sonic* and *Pokemon* actually trend up, not down. *Street Fighter* shows the clearest decline in the dataset. *Resident Evil* and *Mortal Kombat* bounce around without a consistent direction, including a swing in *Resident Evil* from a 100 on one installment down to single digits on others just a couple of entries later. Critic fatigue is not the universal pattern here that it is sometimes assumed to be for franchise filmmaking in general.
 
-Critic scores drop more clearly than box office. The overall LM line angles down more sharply. This means that even when later installments hold their audience or grow at the box office (maybe from built-in loyalty or nostalgia), critics get harsher with each new entry. *Resident Evil* is the clearest example: critics scored later films much lower than the 2002 original.
+@fig-q3-heatmap gives a different view: a tile heatmap where color tracks box office on a log scale, making it easy to compare franchises across installments.
 
-@fig-q3-heatmap gives a different view: a tile heatmap where darker colors mean higher box office, making it easy to compare franchises across installments.
+![Franchise × installment box office heatmap. Color runs from navy (lowest) through teal, sky blue, and yellow to orange (highest) on a log scale; label color switches to stay readable against each tile.](images/fig-q3-heatmap.png){#fig-q3-heatmap}
 
-```{r fig-q3-heatmap}
-#| label: fig-q3-heatmap
-#| fig-cap: "Franchise × installment box office heatmap. Color intensity represents inflation-adjusted box office on a log scale."
-#| echo: false
-#| fig-width: 10
-#| fig-height: 5
+The heatmap in @fig-q3-heatmap makes installment-to-installment swings easy to spot. *Sonic* climbs toward the orange end of the scale with every release, a clean sign of growth rather than fatigue. *Resident Evil* swings repeatedly between the navy low end and the orange high end rather than moving steadily in either direction, so its installments are better described as uneven than as a steady decline. Smaller franchises with only a few installments do not show enough data to call a direction either way.
 
-MovieCountFinal %>%
-  mutate(start_word = fct_reorder(start_word, worldwide_box_office_usd_adj, .fun = max, .desc = TRUE)) %>%
-  ggplot(aes(x = factor(installment), y = start_word, fill = worldwide_box_office_usd_adj / 1e6)) +
-  geom_tile(color = "white", linewidth = 0.5) +
-  geom_text(aes(label = scales::dollar(worldwide_box_office_usd_adj / 1e6, suffix = "M")),
-            size = 2.5, color = "gray10") +
-  scale_fill_gradientn(
-    colors  = c("#023047", "#219EBC", "#8ECAE6", "#FFB703", "#FB8500"),
-    labels  = dollar_format(suffix = "M"),
-    na.value = "gray90",
-    trans   = "log10"
-  ) +
-  labs(x = "Installment Number", y = "Franchise", fill = "Box Office") +
-  theme_minimal(base_size = 13) +
-  theme(panel.grid = element_blank(), axis.ticks = element_blank())
-```
-
-The heatmap in @fig-q3-heatmap makes the fatigue pattern easy to spot. For *Resident Evil* and *Silent Hill*, the color fades from left (early installments) to right (later ones). Smaller franchises with only a few installments do not show any clear direction.
-
-**Key findings for Q3**: Franchise fatigue looks real, but it hits differently depending on what you measure and which franchise you are looking at. Box office dips a bit across installments on average. Critic scores fall harder and more consistently. *Resident Evil*, the biggest franchise in the dataset with six theatrical films, shows fatigue in both money and reviews.
+**Key findings for Q3**: Franchise fatigue is not a consistent pattern in this dataset, in box office or in critic scores. Box office swings up and down within most franchises, *Resident Evil* is the extreme case, more than it steadily declines. Critic scores are just as mixed: *Sonic* and *Pokemon* trend up across installments, *Street Fighter* trends down, and *Resident Evil* and *Mortal Kombat* show no clear direction at all. If fatigue exists here, it looks specific to the franchise rather than a property of the genre.
 
 ---
 
 ### Correlation Analysis
 
-@fig-correlation shows a correlation matrix of all the key numeric variables. It uses a diverging red-white-teal color scale (red = negative, teal = positive) with circle size matched to the correlation strength.
+@fig-correlation shows a correlation matrix of all the key numeric variables. Each cell is colored on a diverging red-white-teal scale (red = negative, teal = positive), darker meaning a stronger relationship, with the exact value printed in the cell. Read it the same way you would a heatmap: scan for the darkest squares first, those are the strongest relationships, and treat the pale, near-white ones as essentially no relationship.
 
-```{r fig-correlation}
-#| label: fig-correlation
-#| fig-cap: "Correlation matrix of box office, budget, and review score variables. Diverging red to white to teal color scale with circle areas proportional to correlation magnitude."
-#| echo: false
-#| fig-width: 8
-#| fig-height: 6
-
-cor_vars <- game_films %>%
-  select(
-    worldwide_box_office_usd_adj,
-    budget_low_usd_adj,
-    budget_high_usd_adj,
-    rotten_tomatoes,
-    metacritic,
-    cinema_score
-  ) %>%
-  rename(
-    `Box Office (adj)`  = worldwide_box_office_usd_adj,
-    `Budget Low (adj)`  = budget_low_usd_adj,
-    `Budget High (adj)` = budget_high_usd_adj,
-    `Rotten Tomatoes`   = rotten_tomatoes,
-    `Metacritic`        = metacritic,
-    `CinemaScore`       = cinema_score
-  )
-
-cor_matrix <- cor(cor_vars, use = "pairwise.complete.obs")
-
-ggcorrplot(
-  cor_matrix,
-  method        = "circle",
-  type          = "lower",
-  lab           = TRUE,
-  lab_size      = 3.5,
-  colors        = c("#E63946", "white", "#2A9D8F"),
-  title         = "Correlation Matrix: Box Office, Budget & Scores",
-  ggtheme       = theme_minimal(base_size = 12),
-  legend.title  = "r",
-  outline.color = "white"
-) +
-  theme(panel.grid.major = element_blank())
-```
+![Correlation matrix of box office, budget, and review score variables. Diverging red to white to teal color scale, darker means a stronger correlation, exact value printed in each cell.](images/fig-correlation.png){#fig-correlation}
 
 A few things worth pointing out from @fig-correlation. Budget and box office have a moderate positive correlation (r around 0.4 to 0.5). More expensive films tend to earn more, but not always. A big budget is not a guarantee. Rotten Tomatoes and Metacritic are tightly correlated (r around 0.85), which makes sense since both aggregate critic reviews. CinemaScore (audience) has a mild positive correlation with both critic metrics (r around 0.3 to 0.4), matching what we found in Q1: audiences and critics move in the same general direction but at different levels. The weakest correlation in the matrix is between budget and CinemaScore (r around 0.11). Spending more money on a film does not seem to make audiences like it more.
 
@@ -609,13 +430,23 @@ A few things worth pointing out from @fig-correlation. Budget and box office hav
 
 We looked at three questions about video game film adaptations across 1986 to 2024. Here is what we found:
 
-**Q1: Critic-Audience Agreement**. Audiences give video game films higher scores than critics do, by about 10 to 20 points on a 0 to 100 scale. That gap has shrunk a little since 2010. All score types drifted up over the same period.
+**Q1: Critic-Audience Agreement**. Audiences give video game films higher scores than critics do, by about 28 points on a 0 to 100 scale. That gap has shrunk a little since 2010. All score types drifted up over the same period.
 
 **Q2: Publisher Size and Box Office**. A publisher's yearly revenue does not tell you much about how well its film adaptations will do. The biggest publishers land hits sometimes (Nintendo's *Super Mario* films), but smaller publishers get comparable results. The IP itself and the people making the film seem to matter more than the company's size.
 
-**Q3: Franchise Fatigue**. Video game film franchises do show signs of fatigue, especially in critic scores, which fall more steeply across installments than box office does. *Resident Evil*, with six theatrical films, shows this clearly across both dimensions.
+**Q3: Franchise Fatigue**. We did not find a consistent fatigue pattern, in box office or in critic scores. Most franchises swing up and down installment to installment more than they steadily decline; *Resident Evil*, the biggest franchise in the dataset with six theatrical films, is the extreme case of this in both measures. A couple of franchises trend in one clear direction (*Sonic* up, *Street Fighter* down), but that looks like a franchise-specific story rather than a general rule for the genre.
 
 Stepping back, these films have always been received coldly by critics and warmly by audiences. That gap might be closing as the industry figures out what works. Money seems to follow the specific property and execution more than the publisher's bank account. And franchise building has real limits: the returns shrink with each new installment.
+
+## Biases in the Data
+
+A few patterns here are not analysis mistakes. They are baked into what is actually being measured, and they are worth calling out on their own, separate from the data-quality limitations below.
+
+**CinemaScore favors the already-convinced.** CinemaScore only surveys people who paid for a ticket on opening night, a self-selected group who showed up before anyone could tell them whether the movie was any good. Critics do not get that built-in goodwill; they are reviewing the film on its merits after the fact. Some of the audience-critic gap in Q1 is really a gap in who is doing the rating, not just a gap in taste.
+
+**Franchise strength and publisher size are tangled together, and we cannot cleanly separate them.** Q2 asks whether a publisher's revenue predicts box office, and Q3 asks whether franchises wear out over time. But *Super Mario* and *Pokemon* walk into a theater with decades of built-in trust from games, TV, toys, and theme parks. Audiences already like the characters before the movie starts. *Resident Evil*, despite being the longest-running franchise in this dataset, has never had that same kind of broad, family-friendly brand goodwill; it has to earn its audience one film at a time. That pre-existing trust is tangled up with both publisher size (Nintendo and The Pokemon Company are large in part because their characters are everywhere) and franchise longevity (well-loved IP gets more sequels greenlit in the first place). Some of what looks like a publisher-size effect in Q2 or a franchise-fatigue effect in Q3 may really be an IP-strength effect sitting underneath both.
+
+**The dataset only contains films that got made.** We only see adaptations a studio decided were worth greenlighting and finishing. Games or franchises that publishers considered adapting and shelved, or films that were finished but never got a wide release, do not show up here. That survivorship filter likely tilts the dataset toward IP that publishers already believed was commercially safe, which reinforces the same bias described above.
 
 ## Limitations & Future Work
 
@@ -655,23 +486,4 @@ Future work could go a few directions: adding genre and rating data to control f
 
 - Wickham, H., et al. (2019). Welcome to the tidyverse. *Journal of Open Source Software*, 4(43), 1686.
 
-## Code Appendix
-
-```{r codeAppend}
-#| echo: false
-#| eval: true
-#| results: asis
-
-labels <- knitr::all_labels()
-labels <- setdiff(labels, "codeAppend")
-
-for (lbl in labels) {
-  code <- knitr::knit_code$get(lbl)
-  if (length(code) > 0 && nchar(paste(code, collapse = "\n")) > 0) {
-    cat(sprintf("\n**Chunk `%s`:**\n\n", lbl))
-    cat("```r\n")
-    cat(paste(code, collapse = "\n"))
-    cat("\n```\n\n")
-  }
-}
-```
+- Board of Governors of the Federal Reserve System. H.10 Foreign Exchange Rates. Retrieved June 22, 2026, from `https://www.federalreserve.gov/releases/h10/`
