@@ -472,7 +472,7 @@ Future work could go a few directions: adding genre and rating data to control f
 
 **Charles Bupp**: [Describe how you used AI tools in your contributions]
 
-**Mason Mitchell**: [Describe how you used AI tools in your contributions]
+**Mason Mitchell**: AI was used to get a starting point for creating the presentation
 
 ## References
 
