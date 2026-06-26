@@ -506,7 +506,7 @@ Future work could go a few directions: adding genre and rating data to control f
 
 **Harsh Rathi**: Used AI to ask for suggestions on improving the report, to compare the draft against the example qmd and the rubric for gaps, to format code into clean aligned blocks, and to create the rubric and example qmd documents in the dev folder. Also used AI to debug the GitHub CI workflow. No code completion or generation was used.
 
-**Charles Bupp**: [Describe how you used AI tools in your contributions]
+**Charles Bupp**: Used AI to fix bugs when creating simple plots. Examples of correction include rectifying some faulty uses of regex and fixing an incorrect wiki scraping.
 
 **Mason Mitchell**: AI was used to get a starting point for creating the presentation
 
