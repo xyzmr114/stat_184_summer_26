@@ -53,7 +53,8 @@ cpi <- tibble::tribble(
   2010, 218.1, 2011, 224.9, 2012, 229.6, 2013, 233.0,
   2014, 236.7, 2015, 237.0, 2016, 240.0, 2017, 245.1,
   2018, 251.1, 2019, 255.7, 2020, 258.8, 2021, 271.0,
-  2022, 292.7, 2023, 304.7, 2024, 313.7
+  2022, 292.7, 2023, 304.7, 2024, 313.7,
+  2025, 321.9, 2026, 330.1
 )
 
 cpi_2024 <- cpi$cpi[cpi$year == 2024]
@@ -222,23 +223,23 @@ p_q2_multi <- pub_joined %>%
 ggsave(file.path(out_dir, "fig-q2-multivariate.png"), p_q2_multi, width = 9, height = 6, dpi = 300)
 cat("saved fig-q2-multivariate.png\n")
 
-ridge_eligible <- pub_joined %>%
+# Boxplot + jittered points instead of a density ridgeline: a kernel density needs
+# more than 1-2 points to mean anything, and four of these eight publishers only have
+# 1-2 matched films. A boxplot degrades gracefully to a single dot for those, while
+# still showing real spread for Capcom (15 films).
+p_q2_box <- pub_joined %>%
   filter(!is.na(worldwide_box_office_usd_adj), !is.na(revenue_usd_billions)) %>%
-  count(company) %>%
-  filter(n >= 3) %>%
-  pull(company)
-
-p_q2_ridge <- pub_joined %>%
-  filter(!is.na(worldwide_box_office_usd_adj), !is.na(revenue_usd_billions), company %in% ridge_eligible) %>%
-  mutate(company = fct_reorder(company, revenue_usd_billions, .desc = TRUE)) %>%
-  ggplot(aes(x = worldwide_box_office_usd_adj / 1e6, y = company, fill = company)) +
-  geom_density_ridges(alpha = 0.8, scale = 1.2) +
+  mutate(company = fct_reorder(company, worldwide_box_office_usd_adj, .fun = median)) %>%
+  ggplot(aes(x = worldwide_box_office_usd_adj / 1e6, y = company)) +
+  geom_boxplot(aes(fill = company), alpha = 0.5, outlier.shape = NA) +
+  geom_jitter(aes(color = company), height = 0.15, size = 2.5, alpha = 0.8) +
   scale_fill_viridis_d(option = "turbo", guide = "none") +
+  scale_color_viridis_d(option = "turbo", guide = "none") +
   scale_x_log10(labels = dollar_format(suffix = "M")) +
   labs(x = "Inflation-Adjusted Box Office (M USD, log scale)", y = "Publisher") +
   theme_minimal(base_size = 13)
 
-ggsave(file.path(out_dir, "fig-q2-ridge.png"), p_q2_ridge, width = 9, height = 5, dpi = 300)
+ggsave(file.path(out_dir, "fig-q2-ridge.png"), p_q2_box, width = 9, height = 5, dpi = 300)
 cat("saved fig-q2-ridge.png\n")
 
 # ---- Q3: Franchise Fatigue ----
@@ -269,7 +270,7 @@ p_q3_bar <- MovieCountFinal %>%
   scale_fill_viridis_d(option = "turbo", guide = "none") +
   scale_y_continuous(labels = dollar_format(suffix = "M")) +
   scale_x_date(date_labels = "%Y") +
-  facet_wrap(~ reorder(start_word, release_date), scales = "free", ncol = 3) +
+  facet_wrap(~ reorder(start_word, release_date), scales = "free_x", ncol = 3) +
   labs(x = "Release Date", y = "Inflation-Adjusted Box Office (M USD)") +
   theme_minimal(base_size = 12) +
   theme(strip.text = element_text(face = "bold"), panel.grid.minor = element_blank())

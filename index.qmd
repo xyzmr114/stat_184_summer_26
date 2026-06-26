@@ -33,7 +33,7 @@ Video game movies have a reputation, and it's mostly earned. The genre goes back
 
 The misses keep coming even now. *Street Fighter* tanked in 1994, *Monster Hunter* came and went without much notice in 2020, and the 2021 *Resident Evil* reboot didn't do much better. But plenty of other adaptations have done fine, and a handful have done great, so something is clearly separating the hits from the misses.
 
-We picked three angles to chase that down: whether critics and audiences even agree on these films, whether a publisher's size actually predicts box office, and whether these franchises burn out the same way ordinary Hollywood series do. The dataset runs from 1986 to 2024, which is enough runway to dig into all three.
+We picked three angles to chase that down: whether critics and audiences even agree on these films, whether a publisher's size actually predicts box office, and whether these franchises burn out the same way ordinary Hollywood series do. The dataset runs from 1986 to 2026, which is enough runway to dig into all three.
 
 ## Research Questions
 
@@ -49,7 +49,7 @@ We focused on three questions:
 
 ### Primary Dataset
 
-Our main data source is the TidyTuesday *Game Films* dataset from June 9, 2026, hosted on the rfordatascience/tidytuesday GitHub repo. The data was scraped from Wikipedia's "List of films based on video games." Each row is one film adaptation.
+Our main data source is the TidyTuesday *Game Films* dataset from June 9, 2026, hosted on the rfordatascience/tidytuesday GitHub repo [2]. The data was scraped from Wikipedia's "List of films based on video games" [1]. Each row is one film adaptation.
 
 The raw dataset has 439 rows and 19 variables: title, release date, category (theatrical, direct-to-video, TV, etc.), original game publisher, worldwide box office with currency label, budget bounds, Rotten Tomatoes score, Metacritic score, CinemaScore audience grade, and distributor info.
 
@@ -57,9 +57,9 @@ The raw dataset has 439 rows and 19 variables: title, release date, category (th
 
 We added two external sources:
 
-- **CPI-U Inflation Data**: U.S. Bureau of Labor Statistics CPI-U annual averages, 1986 to 2024. We used these to adjust all dollar amounts to 2024 dollars so we could compare box office across decades.
+- **CPI-U Inflation Data**: U.S. Bureau of Labor Statistics CPI-U annual averages, 1986 to 2026 [3]. We used these to adjust all dollar amounts to 2024 dollars so we could compare box office across decades.
 
-- **Publisher Revenue Data**: Wikipedia's "List of largest video game companies by revenue," scraped directly from the page. This gives estimated yearly revenue for major publishers, which we used as a proxy for company size.
+- **Publisher Revenue Data**: Wikipedia's "List of largest video game companies by revenue" [4], scraped directly from the page. This gives estimated yearly revenue for major publishers, which we used as a proxy for company size.
 
 ```{r provenance-load}
 #| label: provenance-load
@@ -78,11 +78,44 @@ We ran several cleaning steps to get the data ready. We describe each one below.
 
 ### Variable Selection
 
-We kept all the original variables. Each one was used in at least one of our questions. The main ones: film title for finding franchises, release date for time trends, original game publisher for the publisher-size question, the box office and budget columns for financial analysis, and Rotten Tomatoes, Metacritic, and CinemaScore for the critic-audience comparison.
+We kept the variables relevant to our three questions. @tbl-vars-quant and @tbl-vars-cat list them by type, since quantitative and categorical variables call for different summary statistics.
+
+```{r variable-tables}
+#| label: tbl-vars-quant
+#| tbl-cap: "Quantitative variables used in this analysis"
+
+tibble::tribble(
+  ~Variable, ~Description, ~`Used in`,
+  "release_date",              "Date the film was released",                          "Time trends (Q1, Q3)",
+  "worldwide_box_office",      "Box office total, inflation-adjusted to 2024 USD",     "Q2, Q3",
+  "budget_low / budget_high",  "Production budget range, inflation-adjusted",          "Q2",
+  "rotten_tomatoes",           "Critic aggregate score, 0-100",                        "Q1, Q3",
+  "metacritic",                "Critic aggregate score, 0-100",                        "Q1",
+  "cinema_score",              "Audience survey grade, converted to a 0-100 scale",    "Q1"
+) |>
+  kable(align = c("l", "l", "l")) |>
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed"), full_width = FALSE) |>
+  row_spec(0, bold = TRUE)
+```
+
+```{r variable-tables-cat}
+#| label: tbl-vars-cat
+#| tbl-cap: "Categorical variables used in this analysis"
+
+tibble::tribble(
+  ~Variable, ~Description, ~`Used in`,
+  "title",                    "Film title",                                                "Franchise detection (Q3)",
+  "category",                 "Distribution type (theatrical, direct-to-video, TV, etc.)", "Filtering to theatrical releases",
+  "original_game_publisher",  "Studio/publisher of the source game",                       "Q2"
+) |>
+  kable(align = c("l", "l", "l")) |>
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed"), full_width = FALSE) |>
+  row_spec(0, bold = TRUE)
+```
 
 ### Currency Standardization
 
-The raw monetary values use their original currencies, marked by a separate currency column. We converted everything to USD with the exchange rates below, taken from the Federal Reserve's H.10 Foreign Exchange Rates release as of June 22, 2026:
+The raw monetary values use their original currencies, marked by a separate currency column. We converted everything to USD with the exchange rates below, taken from the Federal Reserve's H.10 Foreign Exchange Rates release as of June 22, 2026 [7]:
 
 ```{r currency-table}
 #| label: currency-table
@@ -125,6 +158,8 @@ game_films <- game_films |>
 
 Comparing box office across decades means adjusting for inflation. We added a CPI-U table, matched on the year a film was released, and scaled every dollar amount by the ratio of the 2024 CPI to that year's CPI. This puts everything in constant 2024 dollars. A dollar earned in 1993 counts the same as a dollar earned in 2024.
 
+Our first pass only covered 1986 to 2024, which silently dropped seven theatrical films with box office data out of every adjusted figure and table, including some of the biggest titles in the dataset (*A Minecraft Movie*, *The Super Mario Galaxy Movie*). We extended the table through 2026 to fix this. The 2025 value is the official annual average; 2026 is a year-to-date average through May since the year is still in progress, not a finalized annual figure.
+
 ```{r cpi-data}
 #| label: cpi-data
 #| echo: false
@@ -140,7 +175,8 @@ cpi <- tibble::tribble(
   2010, 218.1, 2011, 224.9, 2012, 229.6, 2013, 233.0,
   2014, 236.7, 2015, 237.0, 2016, 240.0, 2017, 245.1,
   2018, 251.1, 2019, 255.7, 2020, 258.8, 2021, 271.0,
-  2022, 292.7, 2023, 304.7, 2024, 313.7
+  2022, 292.7, 2023, 304.7, 2024, 313.7,
+  2025, 321.9, 2026, 330.1
 )
 
 cpi_2024 <- cpi$cpi[cpi$year == 2024]
@@ -263,7 +299,7 @@ game_films |>
   row_spec(0, bold = TRUE)
 ```
 
-Box office values span from near zero to over a billion dollars after inflation adjustment. The distribution is heavily right-skewed, which is common for entertainment industry money. Critic scores (Rotten Tomatoes and Metacritic) average in the 40 to 50 range, so video game films mostly get lukewarm to bad reviews. CinemaScore audience grades land around 60 on our 0 to 100 scale. That is a lot higher than critic scores, which points toward the gap we look at in Q1.
+Box office values span from near zero to over a billion dollars after inflation adjustment. The distribution is heavily right-skewed, which is common for entertainment industry money. Critic scores (Rotten Tomatoes and Metacritic) average in the mid-30s, so video game films mostly get bad reviews, not just lukewarm ones. CinemaScore audience grades land around 60 on our 0 to 100 scale. That is a lot higher than critic scores, which points toward the gap we look at in Q1.
 
 ![Distribution of the five key numeric variables. Each panel has its own scale.](images/fig-desc-boxplot.png){#fig-desc-boxplot}
 
@@ -297,7 +333,7 @@ Our first question: do critics and audiences agree on video game films? Has the 
 
 @fig-q1-scatter plots all three against release date with loess-smoothed trend lines and 95% confidence bands.
 
-![Critic and audience scores over time for video game film adaptations, 1986 to 2024. Loess-smoothed trends with 95% confidence bands.](images/fig-q1-scatter.png){#fig-q1-scatter}
+![Critic and audience scores over time for video game film adaptations, 1986 to 2026. Loess-smoothed trends with 95% confidence bands.](images/fig-q1-scatter.png){#fig-q1-scatter}
 
 A few things stand out in @fig-q1-scatter. CinemaScore (audience) ratings sit above both critic metrics across the whole timeline. The loess CinemaScore trend runs between 60 and 70. Rotten Tomatoes and Metacritic cluster in the 40 to 55 range. Audiences rate these films about 28 points higher than critics on average, and this has been true since the start. All three score types also show a slow upward trend after about 2010. That might be because studios started taking video game adaptations more seriously after the early failures, though we have no direct way to test that.
 
@@ -317,7 +353,7 @@ Part of this is a known quirk of CinemaScore itself, not just a video-game-movie
 
 Our second question: do bigger publishers produce film adaptations that make more money? The idea makes sense. A company like Nintendo has far more money than a smaller publisher, so you might expect their films to get bigger budgets, better marketing, and higher returns.
 
-To check, we scraped Wikipedia's list of the largest video game companies by yearly revenue and joined it with our film dataset. After matching and dropping rows with missing data, we had 36 films across 8 publishers.
+To check, we scraped Wikipedia's list of the largest video game companies by yearly revenue and joined it with our film dataset. After matching and dropping rows with missing data, we had 96 films across 34 publishers. @tbl-publisher-performance narrows that down to the 10 publishers with at least three matched films, 67 films in total.
 
 @tbl-publisher-performance shows the aggregated numbers for publishers with at least three films in the matched set, ranked by mean inflation-adjusted box office.
 
@@ -374,11 +410,11 @@ table_data %>%
 
 ![Publisher revenue vs. box office performance (3+ variable figure). Color = publisher, point size = budget, x = company annual revenue, y = inflation-adjusted box office.](images/fig-q2-multivariate.png){#fig-q2-multivariate}
 
-The dashed LM line in @fig-q2-multivariate shows a very weak link between publisher revenue and box office. The two biggest earners in the sample are both Nintendo's *Super Mario* films, and Nintendo is one of the largest publishers by revenue. But most publishers cluster in a narrow band of box office numbers no matter their size. @fig-q2-ridge shows the same pattern another way with a ridgeline density plot of box office distributions.
+The dashed LM line in @fig-q2-multivariate shows a very weak link between publisher revenue and box office. The two biggest earners in the sample are both Nintendo's *Super Mario* films, and Nintendo is one of the largest publishers by revenue. But most publishers cluster in a narrow band of box office numbers no matter their size. @fig-q2-ridge shows the same pattern another way, with the full distribution for every publisher rather than just the average.
 
-![Distribution of inflation-adjusted box office earnings by publisher, limited to publishers with 3+ matched films. Ridgeline density plot on a log scale.](images/fig-q2-ridge.png){#fig-q2-ridge}
+![Distribution of inflation-adjusted box office earnings by publisher, all 8 matched publishers. Boxplots with individual films jittered alongside, log scale.](images/fig-q2-ridge.png){#fig-q2-ridge}
 
-@fig-q2-ridge drops down to the four publishers with enough matched films to estimate a real distribution (Nintendo, Sony Interactive Entertainment, Bandai Namco Entertainment, and Electronic Arts only had one or two matches each, too few to plot a density). Capcom, Square Enix, and Sega each show multiple modes, reflecting the uneven performance of their different franchises. Ubisoft's distribution is bimodal too, with a cluster of smaller films and a separate cluster of bigger ones. The earnings distributions overlap heavily across these publishers, which backs up what we saw in @fig-q2-multivariate.
+A density plot needs more than a couple of points to mean anything, and four of these eight publishers (Nintendo, Sony Interactive Entertainment, Bandai Namco Entertainment, and Electronic Arts) only have one to three matched films, so we used a boxplot with the individual films jittered alongside instead. That puts every publisher on the same chart, down to the ones with a single data point, while still showing real spread for publishers like Capcom (15 films) and Sega (5 films). Capcom, Square Enix, and Sega each cover a wide range, reflecting the uneven performance of their different franchises. Ubisoft's films split into a cluster of smaller earners and a separate cluster of bigger ones. The earnings ranges overlap heavily across these publishers, which backs up what we saw in @fig-q2-multivariate.
 
 **Key findings for Q2**: A publisher's yearly revenue does not predict box office success very well. The biggest publishers do land occasional hits (Nintendo's *Super Mario* films), but smaller publishers like Capcom and Square Enix have put up comparable numbers. Which IP gets adapted and who makes the film seem to matter more than the size of the company behind it.
 
@@ -388,19 +424,19 @@ The dashed LM line in @fig-q2-multivariate shows a very weak link between publis
 
 Our third question: do video game film franchises burn out? That is, do later installments make less money and get worse reviews? This pattern shows up a lot in regular Hollywood franchises but hasn't been studied much for video game adaptations.
 
-We found franchises by pulling the first meaningful word from each title (after dropping leading "The," "A," and "An") and grouping films that share that word. We numbered installments by release date within each group. We only kept franchises with three or more theatrical films. This gave us *Resident Evil*, *Pokemon*, *Mortal Kombat*, *Sonic*, *Street Fighter*, and others.
+We found franchises by pulling the first meaningful word from each title (after dropping leading "The," "A," and "An") and grouping films that share that word. We numbered installments by release date within each group. We only kept franchises with three or more theatrical films. This gave us *Resident Evil*, *Pokemon*, *Mortal Kombat*, *Sonic*, *Street Fighter*, *Super Mario*, and others. One real limitation of this method: it missed a third *Silent Hill* film, *Return to Silent Hill* (2026), because that title doesn't start with "Silent," so the franchise never reached our three-film cutoff.
 
 @fig-q3-box-office shows inflation-adjusted box office for each franchise as bars placed at their actual release date, so installments read left to right in chronological order.
 
-![Inflation-adjusted box office by release date for major video game film franchises (3+ films). Faceted by franchise, each on its own scale.](images/fig-q3-bar.png){#fig-q3-box-office}
+![Inflation-adjusted box office by release date for major video game film franchises (3+ films). Faceted by franchise with a shared y-axis, so bar heights are directly comparable across panels; each panel keeps its own date range on the x-axis.](images/fig-q3-bar.png){#fig-q3-box-office}
 
-@fig-q3-box-office makes the swings within each franchise easy to read. *Sonic* is the cleanest growth story in the dataset: every film outearned the last. *Resident Evil*, with six theatrical films, bounces between very large and very small installments rather than declining steadily, so "fatigue" undersells how uneven that series has been. *Pokemon* stayed fairly flat across most entries before a late installment broke far above the rest.
+@fig-q3-box-office makes the swings within each franchise easy to read. *Sonic* is the cleanest growth story in the dataset: every film outearned the last. *Resident Evil*, with 11 theatrical films, the most of any franchise here, bounces between very large and very small installments rather than declining steadily, so "fatigue" undersells how uneven that series has been. *Pokemon* stayed fairly flat across most entries before a late installment broke far above the rest. *Super Mario* is the most extreme swing of all: from $84M for the 1993 original to $1.4 billion for the 2023 movie, then back down to $790M for the 2026 follow-up, still enormous, just not record-setting.
 
 As a second look at the same question, @fig-q3-charlie plots every franchise together on one shared timeline by release date, with a linear trend fit per franchise and no confidence band.
 
 ![Franchise box office over time, all franchises on one timeline (release date vs. inflation-adjusted box office), with a per-franchise linear trend.](images/fig-q3-charlie.png){#fig-q3-charlie}
 
-@fig-q3-charlie agrees with the faceted view on the main point: there is no single direction for the genre. *Sonic* trends up, *Street* and *Mortal* trend down, and *Resident Evil* and *Pokemon* sit in between with their trend lines roughly flat once everything is overlaid on the same axis.
+@fig-q3-charlie agrees with the faceted view on the main point: there is no single direction for the genre. *Sonic* and *Super Mario* trend up, *Street* and *Mortal* trend down, and *Resident Evil* and *Pokemon* sit in between with their trend lines roughly flat once everything is overlaid on the same axis.
 
 @fig-q3-rt checks whether Rotten Tomatoes scores follow the same pattern.
 
@@ -414,7 +450,7 @@ Critic scores show no single direction once you look franchise by franchise. *So
 
 The heatmap in @fig-q3-heatmap makes installment-to-installment swings easy to spot. *Sonic* climbs toward the orange end of the scale with every release, a clean sign of growth rather than fatigue. *Resident Evil* swings repeatedly between the navy low end and the orange high end rather than moving steadily in either direction, so its installments are better described as uneven than as a steady decline. Smaller franchises with only a few installments do not show enough data to call a direction either way.
 
-**Key findings for Q3**: Franchise fatigue is not a consistent pattern in this dataset, in box office or in critic scores. Box office swings up and down within most franchises, *Resident Evil* is the extreme case, more than it steadily declines. Critic scores are just as mixed: *Sonic* and *Pokemon* trend up across installments, *Street Fighter* trends down, and *Resident Evil* and *Mortal Kombat* show no clear direction at all. If fatigue exists here, it looks specific to the franchise rather than a property of the genre.
+**Key findings for Q3**: Franchise fatigue is not a consistent pattern in this dataset, in box office or in critic scores. Box office swings up and down within most franchises, *Resident Evil* is the extreme case, more than it steadily declines. Critic scores are just as mixed: *Sonic*, *Pokemon*, and *Super Mario* trend up across installments, *Street Fighter* trends down, and *Resident Evil* and *Mortal Kombat* show no clear direction at all. If fatigue exists here, it looks specific to the franchise rather than a property of the genre.
 
 ---
 
@@ -424,17 +460,17 @@ The heatmap in @fig-q3-heatmap makes installment-to-installment swings easy to s
 
 ![Correlation matrix of box office, budget, and review score variables. Diverging red to white to teal color scale, darker means a stronger correlation, exact value printed in each cell.](images/fig-correlation.png){#fig-correlation}
 
-A few things worth pointing out from @fig-correlation. Budget and box office have a moderate positive correlation (r around 0.4 to 0.5). More expensive films tend to earn more, but not always. A big budget is not a guarantee. Rotten Tomatoes and Metacritic are tightly correlated (r around 0.85), which makes sense since both aggregate critic reviews. CinemaScore (audience) has a mild positive correlation with both critic metrics (r around 0.3 to 0.4), matching what we found in Q1: audiences and critics move in the same general direction but at different levels. The weakest correlation in the matrix is between budget and CinemaScore (r around 0.11). Spending more money on a film does not seem to make audiences like it more.
+A few things worth pointing out from @fig-correlation. Budget and box office have a moderate positive correlation (r around 0.53 to 0.54). More expensive films tend to earn more, but not always. A big budget is not a guarantee. Rotten Tomatoes and Metacritic are tightly correlated (r = 0.81), which makes sense since both aggregate critic reviews. CinemaScore (audience) correlates with both critic metrics more than we expected (r = 0.61 with Rotten Tomatoes, 0.53 with Metacritic), matching what we found in Q1: audiences and critics move in the same general direction, just at different levels. The weakest correlation in the matrix is between budget and Rotten Tomatoes (r around 0.15 to 0.16). Spending more money on a film does not seem to make critics like it more.
 
 ## Findings / Conclusions
 
-We looked at three questions about video game film adaptations across 1986 to 2024. Here is what we found:
+We looked at three questions about video game film adaptations across 1986 to 2026. Here is what we found:
 
 **Q1: Critic-Audience Agreement**. Audiences give video game films higher scores than critics do, by about 28 points on a 0 to 100 scale. That gap has shrunk a little since 2010. All score types drifted up over the same period.
 
 **Q2: Publisher Size and Box Office**. A publisher's yearly revenue does not tell you much about how well its film adaptations will do. The biggest publishers land hits sometimes (Nintendo's *Super Mario* films), but smaller publishers get comparable results. The IP itself and the people making the film seem to matter more than the company's size.
 
-**Q3: Franchise Fatigue**. We did not find a consistent fatigue pattern, in box office or in critic scores. Most franchises swing up and down installment to installment more than they steadily decline; *Resident Evil*, the biggest franchise in the dataset with six theatrical films, is the extreme case of this in both measures. A couple of franchises trend in one clear direction (*Sonic* up, *Street Fighter* down), but that looks like a franchise-specific story rather than a general rule for the genre.
+**Q3: Franchise Fatigue**. We did not find a consistent fatigue pattern, in box office or in critic scores. Most franchises swing up and down installment to installment more than they steadily decline; *Resident Evil*, the biggest franchise in the dataset with 11 theatrical films, is the extreme case of this in both measures. A couple of franchises trend in one clear direction (*Sonic* up, *Street Fighter* down), but that looks like a franchise-specific story rather than a general rule for the genre.
 
 Stepping back, these films have always been received coldly by critics and warmly by audiences. That gap might be closing as the industry figures out what works. Money seems to follow the specific property and execution more than the publisher's bank account. And franchise building has real limits: the returns shrink with each new installment.
 
@@ -454,13 +490,13 @@ A few things to keep in mind when reading these results:
 
 - **Exchange Rates**: We used fixed approximate rates. Actual historical daily rates would be more accurate, especially for Japanese and Hong Kong films where exchange rates moved a lot over the decades.
 
-- **CPI Data**: We used annual CPI-U averages. Monthly adjustment would tighten the inflation correction for films released early or late in a given year.
+- **CPI Data**: We used annual CPI-U averages, including a year-to-date average for 2026 since that year is not finished. Monthly adjustment would tighten the inflation correction for films released early or late in a given year, and the 2026 figure will shift once the full year is final.
 
 - **Missing Data**: A lot of films in the original dataset are missing box office numbers, review scores, or both. Older and smaller releases are hit hardest. Our analysis only uses films with complete data, which probably skews toward bigger, more documented releases.
 
 - **Publisher Revenue Matching**: Only some publishers in the film dataset matched the Wikipedia list. Many smaller or defunct publishers were left out of Q2, which limits how broadly our findings apply.
 
-- **Franchise Detection**: Our first-word method is crude. It might lump unrelated films together if they share a first word, and it misses sequels where the first word changes. A better approach would use a more careful regex or manual franchise coding.
+- **Franchise Detection**: Our first-word method is crude. It might lump unrelated films together if they share a first word, and it misses sequels where the first word changes, which is exactly what happened to *Silent Hill*: *Return to Silent Hill* (2026) doesn't start with "Silent," so it never counted toward that franchise's total. A better approach would use a more careful regex or manual franchise coding.
 
 - **Causality**: All the analyses in this project are correlational. We cannot say, for example, that publisher size causes higher box office, or that a few successful films inflate publisher revenue numbers.
 
@@ -476,14 +512,16 @@ Future work could go a few directions: adding genre and rating data to control f
 
 ## References
 
-- TidyTuesday (2026). Game Films dataset. `https://github.com/rfordatascience/tidytuesday/tree/main/data/2026/2026-06-09`
+1. Wikipedia contributors. "List of films based on video games." Wikipedia, The Free Encyclopedia. `https://en.wikipedia.org/wiki/List_of_films_based_on_video_games`
 
-- U.S. Bureau of Labor Statistics. Consumer Price Index for All Urban Consumers (CPI-U), series CUUR0000SA0, annual averages 1986 to 2024. Retrieved from `https://www.bls.gov/cpi/`
+2. TidyTuesday (2026). Game Films dataset. `https://github.com/rfordatascience/tidytuesday/tree/main/data/2026/2026-06-09`
 
-- Wikipedia contributors. "List of largest video game companies by revenue." Wikipedia, The Free Encyclopedia. `https://en.wikipedia.org/wiki/List_of_largest_video_game_companies_by_revenue`
+3. U.S. Bureau of Labor Statistics / Federal Reserve Economic Data (FRED). Consumer Price Index for All Urban Consumers (CPI-U), series CPIAUCNS, annual averages 1986-2025; 2026 figure is a year-to-date average through May 2026, not a finalized annual figure. Retrieved from `https://fred.stlouisfed.org/series/CPIAUCNS`
 
-- R Core Team (2024). R: A language and environment for statistical computing. R Foundation for Statistical Computing, Vienna, Austria.
+4. Wikipedia contributors. "List of largest video game companies by revenue." Wikipedia, The Free Encyclopedia. `https://en.wikipedia.org/wiki/List_of_largest_video_game_companies_by_revenue`
 
-- Wickham, H., et al. (2019). Welcome to the tidyverse. *Journal of Open Source Software*, 4(43), 1686.
+5. R Core Team (2024). R: A language and environment for statistical computing. R Foundation for Statistical Computing, Vienna, Austria.
 
-- Board of Governors of the Federal Reserve System. H.10 Foreign Exchange Rates. Retrieved June 22, 2026, from `https://www.federalreserve.gov/releases/h10/`
+6. Wickham, H., et al. (2019). Welcome to the tidyverse. *Journal of Open Source Software*, 4(43), 1686.
+
+7. Board of Governors of the Federal Reserve System. H.10 Foreign Exchange Rates. Retrieved June 22, 2026, from `https://www.federalreserve.gov/releases/h10/`
