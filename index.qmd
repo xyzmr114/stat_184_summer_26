@@ -525,3 +525,15 @@ Future work could go a few directions: adding genre and rating data to control f
 6. Wickham, H., et al. (2019). Welcome to the tidyverse. *Journal of Open Source Software*, 4(43), 1686.
 
 7. Board of Governors of the Federal Reserve System. H.10 Foreign Exchange Rates. Retrieved June 22, 2026, from `https://www.federalreserve.gov/releases/h10/`
+
+{{< pagebreak >}}
+
+## Code Appendix
+
+All code used in this report is reproduced below.
+
+```{r appendix-all-code}
+#| ref.label: !expr knitr::all_labels()
+#| echo: true
+#| eval: false
+```
